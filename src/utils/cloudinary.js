@@ -1,25 +1,40 @@
 import fs from "fs";
-import { v2 as cloudinary } from "cloudinary";
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLODINARY_API_SECRET,
+import {v2 as cloudinary} from 'cloudinary';
+          
+cloudinary.config({ 
+  cloud_name: 'adityaop', 
+  api_key: '799151416882437', 
+  api_secret: 'MI3tTgB4LHwUMwsffXKP6wn3jvo' 
 });
-const uploadCloudinary = async (localfilePath) => {
+const uploadOnCloudinary = async (localFilePath)=> {
   try {
-    if (!localfilePath) return null;
+    if (!localFilePath) {return null};
 
-    const response = await cloudinary.uploader.upload(localfilePath, {
-      resource_type: "auto",
-    });
-    console.log(response.url);
+    const response = await cloudinary.uploader.upload(localFilePath, {
+      resource_type: "auto"
+    },
+   )
+    // console("cloudinary response  : ", response)
+    fs.unlinkSync(localFilePath)
+    return response;
+  
     // file has been succesfully uploaded on cloudnary
-  } catch (error) {
-    fs.unlinkSync(localfilePath);
+  }
+   catch (error) {
+    fs.unlinkSync(localFilePath);
     return null;
     // remove the unploaded locally saved temporary file as the upload operation got failed
   }
 };
 
-export { uploadCloudinary };
+const deleteFromCloudinary=async(localFilePath)=>{
+  try {
+    if(!localFilePath){return null}
+    const deleate=await cloudinary.uploader.destroy(localFilePath)
+    return deleate
+  } catch (error) {
+    console.log(error,"image is not deleted")
+  }
+}
+
+export { uploadOnCloudinary,deleteFromCloudinary };

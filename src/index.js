@@ -1,13 +1,13 @@
 //require("dotenv").config({ path: "./env" });
 import dotenv from "dotenv";
-import mongoose from "mongoose";
-
-import express from "express";
 import connectDB from "./db/index.js";
-const app = express();
+import { app } from "./app.js";
+
+
 dotenv.config({
-  path: "./env",
+  path: './.env',
 });
+
 connectDB()
   .then(() => {
     app.on("error", (error) => {
@@ -16,12 +16,11 @@ connectDB()
     });
     app.listen(process.env.PORT || 8000, () => {
       console.log(`0|Server is listeninig at port :${process.env.PORT}`);
-    });
+    })
   })
   .catch((err) => {
     console.log("MONGODB ERROR", err);
   });
-
 /*
 (async () => {
   try {
