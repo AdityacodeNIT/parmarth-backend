@@ -1,12 +1,9 @@
-import {Router} from "express"
+import { Router } from "express";
 
 import { getUserAddress } from "../controllers/address.controller.js";
 
-const addressrouter=Router();
+const addressrouter = Router();
 
-addressrouter.route("/getAddress").post(
-    getUserAddress
-    
-    )
+addressrouter.route("/getAddress").post(getUserAddress);
 
 export default addressrouter;
