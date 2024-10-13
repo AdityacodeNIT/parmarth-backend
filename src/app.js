@@ -26,6 +26,7 @@ import addressRouter from "./routes/address.routes.js";
 import paymentRouter from "./routes/payment.routes.js";
 import orderRouter from "./routes/order.routes.js";
 import Reviewrouter from "./routes/review.routes.js";
+import WishListRouter from "./routes/wishlist.routes.js";
 
 //routes Decleration
 app.use("/api/v1/users", userRouter);
@@ -34,6 +35,7 @@ app.use("/api/v1/address", addressRouter);
 app.use("/api/v2/payments", paymentRouter);
 app.use("/api/v2/order", orderRouter);
 app.use("/api/v2/feedback", Reviewrouter);
+app.use("/api/v2/wishlist",WishListRouter);
 
 app.get("/api/getKey", (req, res) =>
         res.status(200).json({ key: process.env.RAZORPAY_API_KEY }),

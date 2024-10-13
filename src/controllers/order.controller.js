@@ -47,7 +47,7 @@ const OrderdItems = asyncHandler(async (req, res) => {
 const retreiveOrder = asyncHandler(async (req, res) => {
         try {
                 const orders = await Order.find({ userId: req.params.userId })
-                        .populate("items.productId", "name price ProductImage") 
+                        .populate("items.productId", "name price ProductImage")
                         .sort({ createdAt: -1 });
 
                 res.status(200).send(orders);
