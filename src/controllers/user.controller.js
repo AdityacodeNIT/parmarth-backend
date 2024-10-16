@@ -6,26 +6,13 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import Jwt from "jsonwebtoken";
 
 /*this is the function for generating access tokenwhere we can use these
-  token by exporting them from dataset because they are quite common*/
+                token by exporting them from dataset because they are quite common*/
 
 const generateAccessAndRefreshtoken = async (userId) => {
         try {
                 const user = await User.findById(userId);
                 const accessToken = user.generateAccessToken();
-                if (!accessToken) {
-                        throw new ApiError(
-                                401,
-                                "Unable to generate access token",
-                        );
-                }
-
                 const refreshToken = user.generateRefreshToken();
-                if (!refreshToken) {
-                        throw new ApiError(
-                                401,
-                                "Unable to generate refresh token",
-                        );
-                }
 
                 user.refreshToken = refreshToken;
                 await user.save({ validateBeforeSave: false });
@@ -37,13 +24,22 @@ const generateAccessAndRefreshtoken = async (userId) => {
                         500,
                         "Something went wrong while generating referesh and access token",
                 );
-                // Rethrow a new error with additional context
         }
 };
 
 /***** starting here ****/
 
 const registerUser = asyncHandler(async (req, res) => {
+        // get user details from frontend
+        // validation - not empty
+        // check if user already exists: username, email
+        // check for images, check for avatar
+        // upload them to cloudinary, avatar
+        // create user object - create entry in db
+        // remove password and refresh token field from response
+        // check for user creation
+        // return res
+
         const { fullName, email, username, password } = req.body;
         if (
                 [fullName, email, username, password].some(
@@ -52,6 +48,7 @@ const registerUser = asyncHandler(async (req, res) => {
         ) {
                 throw new ApiError(400, "All feilds are complsory");
         }
+
         const existedUser = await User.findOne({
                 $or: [{ username }, { email }],
         });
@@ -97,6 +94,7 @@ const registerUser = asyncHandler(async (req, res) => {
                 password,
                 username: username.toLowerCase(),
         });
+
         const createdUser = await User.findById(user._id).select(
                 "-password -refreshToken",
         );
@@ -119,11 +117,6 @@ const registerUser = asyncHandler(async (req, res) => {
                 );
 });
 
-// login user
-
-// check for email and username
-// if user exist check for password
-// if password is correct then for refreshtoken and accessToken
 const loginUser = asyncHandler(async (req, res) => {
         // req body -> data
         // username or email
@@ -133,7 +126,6 @@ const loginUser = asyncHandler(async (req, res) => {
         //send cookie
 
         const { email, username, password } = req.body;
-        //console.log(email);
 
         if (!username && !email) {
                 throw new ApiError(400, "username or email is required");
@@ -159,7 +151,7 @@ const loginUser = asyncHandler(async (req, res) => {
         }
 
         const { accessToken, refreshToken } =
-                await generateAccessAndRefreshtoken(user?._id);
+                await generateAccessAndRefreshtoken(user._id);
 
         const loggedInUser = await User.findById(user._id).select(
                 "-password -refreshToken",
@@ -167,7 +159,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
         const options = {
                 httpOnly: true,
-                secure: false,
+                secure: true,
         };
         return res
                 .status(200)
@@ -205,7 +197,7 @@ const logOutUser = asyncHandler(async (req, res) => {
 
         const options = {
                 httpOnly: true,
-                secure: false,
+                secure: true,
         };
         return res
                 .status(200)
