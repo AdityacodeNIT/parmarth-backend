@@ -44,6 +44,23 @@ const addProduct = asyncHandler(async (req, res) => {
                 );
 });
 
+const searchresult = asyncHandler(async (req, res) => {
+        const { name } = req.body;
+
+        const result = await Product.aggregate([
+                {
+                        $match: {
+                                name: {
+                                        $regex: name,
+                                        $options: "i",
+                                },
+                        },
+                },
+        ]);
+
+        return res.json({ result });
+});
+
 const getProduct = asyncHandler(async (req, res) => {
         const product = await Product.find();
 
@@ -109,4 +126,5 @@ export {
         FillingProduct,
         ReusableProduct,
         getProduct,
+        searchresult,
 };
