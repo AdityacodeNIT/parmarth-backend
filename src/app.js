@@ -6,7 +6,7 @@ const app = express();
 
 app.use(
         cors({
-                origin: process.env.CORS_ORIGIN,
+                origin: process.env.CORS_ORIGIN.split(","),
                 credentials: true,
                 // the credentails are set to true so that we can send cookies , berer token and others with cors.
         }),
@@ -35,7 +35,7 @@ app.use("/api/v1/address", addressRouter);
 app.use("/api/v2/payments", paymentRouter);
 app.use("/api/v2/order", orderRouter);
 app.use("/api/v2/feedback", Reviewrouter);
-app.use("/api/v2/wishlist",WishListRouter);
+app.use("/api/v2/wishlist", WishListRouter);
 
 app.get("/api/getKey", (req, res) =>
         res.status(200).json({ key: process.env.RAZORPAY_API_KEY }),

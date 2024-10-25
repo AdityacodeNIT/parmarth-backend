@@ -159,7 +159,8 @@ const loginUser = asyncHandler(async (req, res) => {
 
         const options = {
                 httpOnly: true,
-                secure: true,
+                secure: true, // Set to true for production (HTTPS)
+                sameSite: "None",
         };
         return res
                 .status(200)
@@ -182,30 +183,33 @@ const loginUser = asyncHandler(async (req, res) => {
 // logout User
 
 const logOutUser = asyncHandler(async (req, res) => {
+        console.log("Logout request received. User:", req.user); // Log user info
+
+        if (!req.user) {
+                return res
+                        .status(401)
+                        .json(new ApiResponse(401, {}, "Unauthorized"));
+        }
+
         await User.findByIdAndUpdate(
                 req.user?._id,
-
-                {
-                        $unset: {
-                                refreshToken: 1,
-                        },
-                },
-                {
-                        new: true,
-                },
+                { $unset: { refreshToken: 1 } },
+                { new: true },
         );
 
         const options = {
                 httpOnly: true,
-                secure: true,
-                sameSite: "None",
+                secure: true, // Set to true for production (HTTPS)
+                sameSite: "None", // Set based on the environment
         };
+
         return res
                 .status(200)
                 .clearCookie("accessToken", options)
                 .clearCookie("refreshToken", options)
                 .json(new ApiResponse(200, {}, "User Logged Out"));
 });
+
 // incoming refresh token
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
@@ -235,6 +239,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
                 const options = {
                         httpOnly: true,
                         secure: true,
+                        sameSite: "None",
                 };
 
                 const { accessToken, newRefreshToken } =
