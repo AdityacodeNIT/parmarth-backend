@@ -5,7 +5,7 @@ import { Product } from "../models/product.models.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const addProduct = asyncHandler(async (req, res) => {
-        const { name, price, description, Category } = req.body;
+        const { name, price, description, Category, stocks } = req.body;
 
         if ([name, price].some((feild) => feild.trim === "")) {
                 throw new ApiError(401, "all feilds are comlusory");
@@ -32,6 +32,7 @@ const addProduct = asyncHandler(async (req, res) => {
                 description,
                 Category,
                 ProductImage: ProductImage.url,
+                stocks,
         });
         return res
                 .status(201)

@@ -20,7 +20,6 @@ const review = asyncHandler(async (req, res) => {
 // Function to calculate average rating using MongoDB aggregation
 const averageReview = asyncHandler(async (req, res) => {
         const { productId } = req.body;
-        console.log("Calculating average for productId:", productId);
 
         // Convert productId to ObjectId
         const objectId = new ObjectId(productId);
@@ -41,16 +40,10 @@ const averageReview = asyncHandler(async (req, res) => {
 
         // const count = await Review.countDocuments({ productId });
 
-        console.log("Aggregation result:", result);
+        // console.log("Aggregation result:", result);
 
         const averageRating = result.length > 0 ? result[0].averageRating : 0;
         const count = result.length > 0 ? result[0].count : 0;
-
-        // console.log("Average rating calculated:", averageRating);
-
-        // console.log("count of the document", count);
-
-        // Return the average rating
         return res.json({ averageRating, count });
 });
 

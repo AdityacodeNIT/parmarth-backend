@@ -286,14 +286,14 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 });
 
 const changePassword = asyncHandler(async (req, res) => {
-        const { oldPassword, newPassword, confPassword } = req.body;
+        const { currentPassword, newPassword, confirmPassword } = req.body;
 
-        if (!(confPassword === newPassword)) {
+        if (!(confirmPassword === newPassword)) {
                 throw new ApiError(404, "password not matching");
         }
 
         const user = await User.findById(req.user?.id);
-        const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+        const isPasswordCorrect = await user.isPasswordCorrect(currentPassword);
 
         if (!isPasswordCorrect) {
                 throw new ApiError(400, "Invalid Password");
@@ -322,6 +322,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 
 const updateAccountdetail = asyncHandler(async (req, res) => {
         const { fullName, email } = req.body;
+
         if (!(fullName || email)) {
                 throw new ApiError(400, "All feilds are required");
         }

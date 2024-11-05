@@ -28,6 +28,10 @@ const ProductSchema = new Schema(
                         ],
                         required: true,
                 },
+                stocks: {
+                        type: Number,
+                        required: true,
+                },
         },
         { timestamps: true },
 );

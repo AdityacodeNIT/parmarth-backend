@@ -7,16 +7,13 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
         try {
                 const token =
                         req.cookies?.accessToken ||
-                        req.header("Authorization")?.replace("Bearer", "");
+                        req
+                                .header("Authorization")
+                                ?.replace("Bearer ", "")
+                                .trim();
 
                 if (!token) {
-                        throw new ApiError(401, "token is not present");
-                }
-
-                if (typeof token !== "string") {
-                        throw new ApiError(401, "type of token must be string");
-                } else if (token) {
-                        console.log("token is here " + token);
+                        throw new ApiError(401, "Token is not present");
                 }
 
                 const decodedToken = jwt.verify(
@@ -24,20 +21,18 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
                         process.env.ACCESS_TOKEN_SECRET,
                 );
 
-                const user = await User.findById(decodedToken?._id).select(
+                const user = await User.findById(decodedToken._id).select(
                         "-password -refreshToken",
                 );
 
                 if (!user) {
                         throw new ApiError(401, "Invalid Access Token");
                 }
-                req.user = user;
+
+                req.user = user; // Attach user to req
                 next();
         } catch (error) {
-                console.error(error);
-                throw new ApiError(
-                        401,
-                        error.message || "inavlid access token",
-                );
+                console.error("JWT verification error:", error.message);
+                throw new ApiError(401, "Invalid Access Token");
         }
 });
