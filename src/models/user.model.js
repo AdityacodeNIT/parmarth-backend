@@ -44,6 +44,11 @@ const userSchema = new Schema(
                 refreshToken: {
                         type: String,
                 },
+                isAdmin: {
+                        type: String,
+                        enum: ["true", "false"],
+                        default: "false",
+                },
         },
 
         { timestamp: true },
@@ -71,7 +76,7 @@ userSchema.methods.generateAccessToken = function () {
                 process.env.ACCESS_TOKEN_SECRET,
                 {
                         expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
-                }
+                },
         );
 };
 
@@ -86,6 +91,5 @@ userSchema.methods.generateRefreshToken = function () {
                 },
         );
 };
-
 
 export const User = mongoose.model("User", userSchema);
