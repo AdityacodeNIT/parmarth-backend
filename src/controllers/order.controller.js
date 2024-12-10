@@ -14,11 +14,12 @@ import { Order } from "../models/order.models.js";
 // });
 
 const OrderdItems = asyncHandler(async (req, res) => {
-        const { userId, items } = req.body; // items contains productId and quantity
+        const { items } = req.body;
+        // items contains productId and quantity
 
         try {
                 const newOrder = new Order({
-                        userId,
+                        userId: req.user._id,
                         items, // This includes the productId and quantity
                 });
 
@@ -29,24 +30,9 @@ const OrderdItems = asyncHandler(async (req, res) => {
         }
 });
 
-// GET route to retrieve orders for a specific user
-// app.get("/orders/:userId",)
-// const retreiveOrder = asyncHandler(async (req, res) => {
-//         try {
-//                 const orders = await Order.find({
-//                         userId: req.params.userId,
-//                 }).sort({
-//                         date: -1,
-//                 });
-//                 res.status(200).send(orders);
-//         } catch (error) {
-//                 res.status(500).send(error);
-//         }
-// });
-
 const retreiveOrder = asyncHandler(async (req, res) => {
         try {
-                const orders = await Order.find({ userId: req.params.userId })
+                const orders = await Order.find({ userId: req.user._id })
                         .populate("items.productId", "name price ProductImage")
                         .sort({ createdAt: -1 });
 

@@ -1,9 +1,11 @@
 import { Router } from "express";
 
-import { getUserAddress } from "../controllers/address.controller.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { addAddress, getAddress } from "../controllers/address.controller.js";
 
 const addressrouter = Router();
 
-addressrouter.route("/getAddress").post(getUserAddress);
+addressrouter.route("/addAddress").post(verifyJWT, addAddress);
+addressrouter.route("/getAddress").get(verifyJWT, getAddress);
 
 export default addressrouter;

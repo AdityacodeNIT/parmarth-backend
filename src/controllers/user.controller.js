@@ -19,7 +19,6 @@ const generateAccessAndRefreshtoken = async (userId) => {
 
                 return { accessToken, refreshToken };
         } catch (error) {
-                // Log the original error for debugging purposes
                 throw new ApiError(
                         500,
                         "Something went wrong while generating referesh and access token",
@@ -139,23 +138,11 @@ const registerUser = asyncHandler(async (req, res) => {
 });
 
 const loginUser = asyncHandler(async (req, res) => {
-        // req body -> data
-        // username or email
-        //find the user
-        //password check
-        //access and referesh token
-        //send cookie
-
         const { email, username, password } = req.body;
 
         if (!username && !email) {
                 throw new ApiError(400, "username or email is required");
         }
-
-        // if (!(username || email)) {
-        //     throw new ApiError(400, "username or email is required")
-
-        // }
 
         const user = await User.findOne({
                 $or: [{ username }, { email }],
@@ -180,13 +167,18 @@ const loginUser = asyncHandler(async (req, res) => {
 
         const options = {
                 httpOnly: true,
-                secure: true, // Set to true for production (HTTPS)
-                sameSite: "None",
+                secure: true,
+                // sameSite: "None", // Set to true for production (HTTPS)
         };
+
+        // Log the response headers to check if cookies are set
+        console.log(res.getHeaders());
+
         return res
+
                 .status(200)
-                .cookie("accessToken", accessToken, options)
                 .cookie("refreshToken", refreshToken, options)
+                .cookie("accessToken", accessToken, options)
 
                 .json(
                         new ApiResponse(
@@ -200,8 +192,6 @@ const loginUser = asyncHandler(async (req, res) => {
                         ),
                 );
 });
-
-// logout User
 
 const logOutUser = asyncHandler(async (req, res) => {
         console.log("Logout request received. User:", req.user); // Log user info
@@ -220,8 +210,8 @@ const logOutUser = asyncHandler(async (req, res) => {
 
         const options = {
                 httpOnly: true,
-                secure: true, // Set to true for production (HTTPS)
-                sameSite: "None", // Set based on the environment
+                secure: true,
+                sameSite: "None",
         };
 
         return res
@@ -244,22 +234,22 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         try {
                 const decodedToken = Jwt.verify(
                         incomingrefreshToken,
-                        process.env.REFRESH_TOKEN_SECRET,
+                        process.env.ACCESS_TOKEN_SECRET,
                 );
                 const user = await User.findById(decodedToken?._id);
                 if (!user) {
-                        throw new ApiError(401, "invalid refreshToken");
+                        throw new ApiError(401, "Invalid refresh token");
                 }
                 if (incomingrefreshToken !== user?.refreshToken) {
                         throw new ApiError(
                                 401,
-                                "refresh token is expired or match",
+                                "Refresh token is expired or does not match",
                         );
                 }
 
                 const options = {
                         httpOnly: true,
-                        secure: true,
+                        secure: true, // true for production (HTTPS)
                         sameSite: "None",
                 };
 
@@ -277,11 +267,15 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
                                                 accessToken,
                                                 refreshToken: newRefreshToken,
                                         },
-                                        "refresh token is make",
+                                        "Refresh token is created successfully",
                                 ),
                         );
         } catch (error) {
-                throw new ApiError(error?.message, "this is the error");
+                console.error("Error during token refresh:", error);
+                throw new ApiError(
+                        401,
+                        error.message || "Invalid refresh token",
+                );
         }
 });
 

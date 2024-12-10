@@ -2,7 +2,6 @@ const asyncHandler = (fn) => async (req, res, next) => {
         try {
                 await fn(req, res, next);
         } catch (error) {
-                // Check if the error code is a MongoDB duplicate key error (code 11000)
                 let statusCode = 500; // Default to internal server error
 
                 if (error.code === 11000) {
