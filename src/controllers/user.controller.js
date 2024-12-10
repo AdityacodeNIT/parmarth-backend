@@ -168,7 +168,7 @@ const loginUser = asyncHandler(async (req, res) => {
         const options = {
                 httpOnly: true,
                 secure: true,
-                // sameSite: "None", // Set to true for production (HTTPS)
+                ameSite: "None", // Set to true for production (HTTPS)
         };
 
         // Log the response headers to check if cookies are set
