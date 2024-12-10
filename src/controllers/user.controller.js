@@ -164,11 +164,11 @@ const loginUser = asyncHandler(async (req, res) => {
         const loggedInUser = await User.findById(user._id).select(
                 "-password -refreshToken",
         );
-
         const options = {
                 httpOnly: true,
-                secure: true,
-                ameSite: "None", // Set to true for production (HTTPS)
+                secure: process.env.NODE_ENV === "production", // true for production (HTTPS)
+                sameSite: "None",
+                // domain: 'your-domain.com' // Set this if needed
         };
 
         // Log the response headers to check if cookies are set
@@ -249,8 +249,9 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
                 const options = {
                         httpOnly: true,
-                        secure: true, // true for production (HTTPS)
+                        secure: process.env.NODE_ENV === "production", // true for production (HTTPS)
                         sameSite: "None",
+                        // domain: 'your-domain.com' // Set this if needed
                 };
 
                 const { accessToken, newRefreshToken } =
