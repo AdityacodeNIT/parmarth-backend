@@ -169,6 +169,7 @@ const loginUser = asyncHandler(async (req, res) => {
         const options = {
                 httpOnly: true,
                 secure: true,
+                sameSite: "None",
         };
 
         console.log(res.getHeaders());
@@ -249,6 +250,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
                 const options = {
                         httpOnly: true,
                         secure: true,
+                        sameSite: "None",
                 };
 
                 const { accessToken, refreshToken } =
