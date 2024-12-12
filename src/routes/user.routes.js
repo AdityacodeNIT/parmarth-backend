@@ -37,5 +37,5 @@ router.route("/updateUserdetail").post(verifyJWT, updateAccountdetail);
 router.route("/changePassword").post(verifyJWT, changePassword);
 // Secured Routes
 
-router.route("/refresh-token").post(refreshAccessToken);
+router.route("/refresh-token").post(verifyJWT, refreshAccessToken);
 export default router;

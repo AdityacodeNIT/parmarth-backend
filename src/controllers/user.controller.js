@@ -9,6 +9,7 @@ import Jwt from "jsonwebtoken";
                 token by exporting them from dataset because they are quite common*/
 
 const generateAccessAndRefreshtoken = async (userId) => {
+        console.log("Generating tokens for User ID is :", userId);
         try {
                 const user = await User.findById(userId);
                 const accessToken = user.generateAccessToken();
@@ -17,6 +18,8 @@ const generateAccessAndRefreshtoken = async (userId) => {
                 user.refreshToken = refreshToken;
                 await user.save({ validateBeforeSave: false });
 
+                console.log("Access Tokeni is :", accessToken);
+                console.log("Refresh Token is :", refreshToken);
                 return { accessToken, refreshToken };
         } catch (error) {
                 throw new ApiError(
@@ -161,17 +164,13 @@ const loginUser = asyncHandler(async (req, res) => {
         const { accessToken, refreshToken } =
                 await generateAccessAndRefreshtoken(user._id);
 
-        const loggedInUser = await User.findById(user._id).select(
-                "-password -refreshToken",
-        );
+        const loggedInUser = await User.findById(user._id).select("-password ");
+
         const options = {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === "production", // true for production (HTTPS)
-                sameSite: "None",
-                // domain: 'your-domain.com' // Set this if needed
+                secure: true,
         };
 
-        // Log the response headers to check if cookies are set
         console.log(res.getHeaders());
 
         return res
@@ -194,7 +193,7 @@ const loginUser = asyncHandler(async (req, res) => {
 });
 
 const logOutUser = asyncHandler(async (req, res) => {
-        console.log("Logout request received. User:", req.user); // Log user info
+        console.log("Logout request received. User:", req.user);
 
         if (!req.user) {
                 return res
@@ -221,12 +220,8 @@ const logOutUser = asyncHandler(async (req, res) => {
                 .json(new ApiResponse(200, {}, "User Logged Out"));
 });
 
-// incoming refresh token
-
 const refreshAccessToken = asyncHandler(async (req, res) => {
-        const incomingrefreshToken =
-                req.cookies.refreshToken || req.body.refreshToken;
-
+        const incomingrefreshToken = req.cookies.refreshToken;
         if (!incomingrefreshToken) {
                 throw new ApiError(401, "Unauthorized Request");
         }
@@ -234,13 +229,17 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         try {
                 const decodedToken = Jwt.verify(
                         incomingrefreshToken,
-                        process.env.ACCESS_TOKEN_SECRET,
+                        process.env.REFRESH_TOKEN_SECRET,
                 );
+
+                console.log(decodedToken);
                 const user = await User.findById(decodedToken?._id);
                 if (!user) {
                         throw new ApiError(401, "Invalid refresh token");
                 }
-                if (incomingrefreshToken !== user?.refreshToken) {
+
+                console.log("ye hai main", user.refreshToken);
+                if (incomingrefreshToken !== user.refreshToken) {
                         throw new ApiError(
                                 401,
                                 "Refresh token is expired or does not match",
@@ -249,24 +248,28 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
                 const options = {
                         httpOnly: true,
-                        secure: process.env.NODE_ENV === "production", // true for production (HTTPS)
-                        sameSite: "None",
-                        // domain: 'your-domain.com' // Set this if needed
+                        secure: true,
                 };
 
-                const { accessToken, newRefreshToken } =
+                const { accessToken, refreshToken } =
                         await generateAccessAndRefreshtoken(user._id);
+
+                console.log("Setting cookies for refresh the :");
+                console.log("Access Token Cookie:", accessToken);
+                console.log("Refresh Token Cookie:", refreshToken);
+
+                console.log(res.getHeaders());
 
                 return res
                         .status(200)
                         .cookie("accessToken", accessToken, options)
-                        .cookie("refreshToken", newRefreshToken, options)
+                        .cookie("refreshToken", refreshToken, options)
                         .json(
                                 new ApiResponse(
                                         200,
                                         {
                                                 accessToken,
-                                                refreshToken: newRefreshToken,
+                                                refreshToken: refreshToken,
                                         },
                                         "Refresh token is created successfully",
                                 ),
@@ -378,85 +381,6 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
                         ),
                 );
 });
-
-// const userAvatarTobeDeleted = asyncHandler(async (req, res) => {
-//   const deleteuser = await user.findByIdAndUpdate;
-// });
-const getUserChnanelProfile = asyncHandler(async (req, res) => {
-        const { username } = req.params;
-
-        if (!username?.trim) {
-                throw new ApiError(400, "Username is missing");
-        }
-        await User.aggregate([
-                {
-                        $match: {
-                                username: username?.toLowerCase(),
-                        },
-                },
-                {
-                        $lookup: {
-                                from: "subscriptions",
-                                localField: "_id",
-                                foreignField: "channel",
-                                as: "Subscribers",
-                        },
-                },
-                {
-                        $lookup: {
-                                from: "subscriptions",
-                                localField: "_id",
-                                foreignField: "subscribers",
-                                as: "subscribedTo",
-                        },
-                },
-                {
-                        $addFields: {
-                                subscribersCount: {
-                                        $size: "$subscribers",
-                                },
-                                channelsSubscribedToCount: {
-                                        $size: "$subscribedTo",
-                                },
-                                isSubscibed: {
-                                        $cond: {
-                                                if: {
-                                                        $in: [
-                                                                req.user?._id,
-                                                                "$subscribers.subscriber",
-                                                        ],
-                                                },
-                                                then: true,
-                                                else: false,
-                                        },
-                                },
-                        },
-                },
-                {
-                        $project: {
-                                fullName: 1,
-                                username: 1,
-                                subscribersCount: 1,
-                                isSubscibed: 1,
-                                email: 1,
-                                avatar: 1,
-                        },
-                },
-        ]);
-
-        if (!channel?.length) {
-                throw new ApiError(404, "array does not exist");
-        }
-        return res
-                .status(200)
-                .json(
-                        new ApiResponse(
-                                200,
-                                channel[0],
-                                "User channel fethced succesfully",
-                        ),
-                );
-});
 export {
         registerUser,
         loginUser,
@@ -466,5 +390,4 @@ export {
         changePassword,
         updateAccountdetail,
         updateUserAvatar,
-        getUserChnanelProfile,
 };
