@@ -9,7 +9,6 @@ import Jwt from "jsonwebtoken";
                 token by exporting them from dataset because they are quite common*/
 
 const generateAccessAndRefreshtoken = async (userId) => {
-        console.log("Generating tokens for User ID is :", userId);
         try {
                 const user = await User.findById(userId);
                 const accessToken = user.generateAccessToken();
@@ -17,9 +16,6 @@ const generateAccessAndRefreshtoken = async (userId) => {
 
                 user.refreshToken = refreshToken;
                 await user.save({ validateBeforeSave: false });
-
-                console.log("Access Tokeni is :", accessToken);
-                console.log("Refresh Token is :", refreshToken);
                 return { accessToken, refreshToken };
         } catch (error) {
                 throw new ApiError(
@@ -43,9 +39,6 @@ const registerUser = asyncHandler(async (req, res) => {
                 throw new ApiError(400, "All fields are required");
         }
 
-        console.log("Registering user:", { fullName, email, username });
-
-        // Check if user already exists
         const existedUser = await User.findOne({
                 $or: [{ username }, { email }],
         });
@@ -73,13 +66,9 @@ const registerUser = asyncHandler(async (req, res) => {
                 throw new ApiError(400, "Avatar file is required");
         }
 
-        console.log("Avatar file path:", avatarlocalPath);
-        console.log("Cover image file path:", coverImageLocalPath);
-
         let avatar;
         try {
                 avatar = await uploadOnCloudinary(avatarlocalPath);
-                console.log("Uploaded Avatar URL:", avatar.url);
         } catch (error) {
                 console.error("Error uploading avatar:", error);
                 throw new ApiError(500, "Error uploading avatar");
@@ -90,10 +79,6 @@ const registerUser = asyncHandler(async (req, res) => {
                 try {
                         coverImage =
                                 await uploadOnCloudinary(coverImageLocalPath);
-                        console.log(
-                                "Uploaded Cover Image URL:",
-                                coverImage.url,
-                        );
                 } catch (error) {
                         console.error("Error uploading cover image:", error);
                         throw new ApiError(500, "Error uploading cover image");
@@ -111,7 +96,6 @@ const registerUser = asyncHandler(async (req, res) => {
                         password,
                         username: username.toLowerCase(),
                 });
-                console.log("User created in DB:", user._id);
         } catch (error) {
                 console.error("Error creating user in DB:", error);
                 throw new ApiError(500, "Error creating user in database");
@@ -172,8 +156,6 @@ const loginUser = asyncHandler(async (req, res) => {
                 sameSite: "None",
         };
 
-        console.log(res.getHeaders());
-
         return res
 
                 .status(200)
@@ -194,8 +176,6 @@ const loginUser = asyncHandler(async (req, res) => {
 });
 
 const logOutUser = asyncHandler(async (req, res) => {
-        console.log("Logout request received. User:", req.user);
-
         if (!req.user) {
                 return res
                         .status(401)
@@ -233,13 +213,11 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
                         process.env.REFRESH_TOKEN_SECRET,
                 );
 
-                console.log(decodedToken);
                 const user = await User.findById(decodedToken?._id);
                 if (!user) {
                         throw new ApiError(401, "Invalid refresh token");
                 }
 
-                console.log("ye hai main", user.refreshToken);
                 if (incomingrefreshToken !== user.refreshToken) {
                         throw new ApiError(
                                 401,
@@ -255,12 +233,6 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
                 const { accessToken, refreshToken } =
                         await generateAccessAndRefreshtoken(user._id);
-
-                console.log("Setting cookies for refresh the :");
-                console.log("Access Token Cookie:", accessToken);
-                console.log("Refresh Token Cookie:", refreshToken);
-
-                console.log(res.getHeaders());
 
                 return res
                         .status(200)

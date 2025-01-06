@@ -7,23 +7,17 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 // Function to add a review
 const review = asyncHandler(async (req, res) => {
         const { rating, productId, message } = req.body;
-
-        // Add new review to the database
+        // Add new review
         const reviews = await Review.create({ rating, productId, message });
-
-        // Count the total number of reviews for the product
 
         // Return the created review and the total count of reviews
         return res.status(201).json(new ApiResponse(200, reviews));
 });
-
 // Function to calculate average rating using MongoDB aggregation
 const averageReview = asyncHandler(async (req, res) => {
         const { productId } = req.body;
-
         // Convert productId to ObjectId
         const objectId = new ObjectId(productId);
-
         // Aggregation to calculate the average rating for the product
         const result = await Review.aggregate([
                 {
@@ -37,11 +31,7 @@ const averageReview = asyncHandler(async (req, res) => {
                         },
                 },
         ]);
-
-        // const count = await Review.countDocuments({ productId });
-
-        // console.log("Aggregation result:", result);
-
+        // Return the average rating and the total count
         const averageRating = result.length > 0 ? result[0].averageRating : 0;
         const count = result.length > 0 ? result[0].count : 0;
         return res.json({ averageRating, count });

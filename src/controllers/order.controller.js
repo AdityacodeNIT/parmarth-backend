@@ -30,16 +30,16 @@ const OrderdItems = asyncHandler(async (req, res) => {
         }
 });
 
-const retreiveOrder = asyncHandler(async (req, res) => {
-        try {
-                const orders = await Order.find({ userId: req.user._id })
-                        .populate("items.productId", "name price ProductImage")
-                        .sort({ createdAt: -1 });
+// const retreiveOrder = asyncHandler(async (req, res) => {
+//         try {
+//                 const orders = await Order.find({ userId: req.user._id })
+//                         .populate("items.productId", "name price ProductImage")
+//                         .sort({ createdAt: -1 });
 
-                res.status(200).send(orders);
-        } catch (error) {
-                res.status(500).send(error);
-        }
-});
+//                 res.status(200).send(orders);
+//         } catch (error) {
+//                 res.status(500).send(error);
+//         }
+// });
 
-export { retreiveOrder, OrderdItems };
+export { OrderdItems };

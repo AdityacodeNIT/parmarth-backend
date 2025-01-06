@@ -19,28 +19,23 @@ const userSchema = new Schema(
                         lowercase: true,
                         trim: true,
                 },
-
                 fullName: {
                         type: String,
                         required: true,
                         trim: true,
                         index: true,
                 },
-
                 coverImage: {
                         type: String, // cloudinary
                 },
-
                 avatar: {
                         type: String,
-                        required: true, // Cloudnary url
+                        required: true, // Cloudnary
                 },
-
                 password: {
                         type: String,
                         required: [true, "Password is required"],
                 },
-
                 refreshToken: {
                         type: String,
                 },
@@ -50,7 +45,6 @@ const userSchema = new Schema(
                         default: "false",
                 },
         },
-
         { timestamp: true },
 );
 

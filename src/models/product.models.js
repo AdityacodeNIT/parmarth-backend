@@ -32,6 +32,22 @@ const ProductSchema = new Schema(
                         type: Number,
                         required: true,
                 },
+                length: {
+                        type: Number,
+                        required: true, // Length in cm
+                },
+                breadth: {
+                        type: Number,
+                        required: true, // Breadth in cm
+                },
+                height: {
+                        type: Number,
+                        required: true, // Height in cm
+                },
+                weight: {
+                        type: Number,
+                        required: true, // Weight in kg
+                },
         },
         { timestamps: true },
 );

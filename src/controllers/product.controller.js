@@ -5,7 +5,17 @@ import { Product } from "../models/product.models.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const addProduct = asyncHandler(async (req, res) => {
-        const { name, price, description, Category, stocks } = req.body;
+        const {
+                name,
+                price,
+                description,
+                Category,
+                stocks,
+                length,
+                breadth,
+                height,
+                weight,
+        } = req.body;
 
         if ([name, price].some((feild) => feild.trim === "")) {
                 throw new ApiError(401, "all feilds are comlusory");
@@ -17,11 +27,14 @@ const addProduct = asyncHandler(async (req, res) => {
                 throw new ApiError(409, "Product Already exist");
         }
 
+        // local path from multer
         const ProductImagelocalPath = req.file?.path;
 
         if (!ProductImagelocalPath) {
                 throw new ApiError(400, "product Image is required");
         }
+
+        // Url from the cloudinary
         const ProductImage = await uploadOnCloudinary(ProductImagelocalPath);
         if (!ProductImage) {
                 throw new ApiError(400, "Product is needed");
@@ -33,6 +46,10 @@ const addProduct = asyncHandler(async (req, res) => {
                 Category,
                 ProductImage: ProductImage.url,
                 stocks,
+                length,
+                breadth,
+                height,
+                weight,
         });
         return res
                 .status(201)

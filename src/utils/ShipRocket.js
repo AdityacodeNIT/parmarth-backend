@@ -3,6 +3,7 @@ import axios from "axios";
 const SHIPROCKET_API_BASE = "https://apiv2.shiprocket.in/v1/external";
 const SHIPROCKET_EMAIL = process.env.SHIPROCKET_EMAIL;
 const SHIPROCKET_PASSWORD = process.env.SHIPROCKET_PASSWORD;
+import { jwtDecode } from "jwt-decode";
 
 let authToken = null;
 
@@ -27,18 +28,40 @@ export const authenticate = async () => {
         }
 };
 
-// Create headers for authenticated requests
-export const getHeaders = () => ({
-        headers: { Authorization: `Bearer ${authToken}` },
-});
+const getAuthToken = async () => {
+        if (!authToken || isTokenExpired(authToken)) {
+                await authenticate(); // Re-authenticate if the token is missing or expired
+        }
+        return authToken; // Return the valid token
+};
+
+const isTokenExpired = (token) => {
+        const { exp } = jwtDecode(token);
+        const currentTime = Math.floor(Date.now() / 1000);
+        return exp < currentTime;
+};
+
+// Use this function in other requests:
+export const getHeaders = async () => {
+        const token = await getAuthToken();
+        return {
+                headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}}`,
+                },
+        };
+};
+
+// Create headers
 
 // Create an order
 export const createOrder = async (orderData) => {
+        console.log("Order data:", orderData);
         try {
                 const response = await axios.post(
                         `${SHIPROCKET_API_BASE}/orders/create/adhoc`,
                         orderData,
-                        getHeaders(),
+                        await getHeaders(),
                 );
                 return response.data;
         } catch (error) {

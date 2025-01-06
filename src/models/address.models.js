@@ -7,7 +7,11 @@ const AddressSchema = new Schema(
                         ref: "User",
                         required: true,
                 },
-                name: {
+                firstName: {
+                        type: String,
+                        required: true,
+                },
+                lastName: {
                         type: String,
                         required: true,
                 },
@@ -26,6 +30,7 @@ const AddressSchema = new Schema(
                 country: {
                         type: String,
                         required: true,
+                        default: "India",
                 },
                 postalCode: {
                         type: String,

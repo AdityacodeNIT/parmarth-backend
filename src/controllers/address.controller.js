@@ -6,7 +6,8 @@ import { Address } from "../models/address.models.js";
 // Add address
 const addAddress = asyncHandler(async (req, res) => {
         const {
-                name,
+                firstName,
+                lastName,
                 streetAddress,
                 city,
                 state,
@@ -16,11 +17,10 @@ const addAddress = asyncHandler(async (req, res) => {
                 alternateNumber,
         } = req.body;
 
-        console.log(req.body);
-
         if (
                 [
-                        name,
+                        firstName,
+                        lastName,
                         streetAddress,
                         city,
                         state,
@@ -28,13 +28,14 @@ const addAddress = asyncHandler(async (req, res) => {
                         postalCode,
                         phoneNumber,
                         alternateNumber,
-                ].some((field) => field?.trim() === "")
+                ].some((field) => !field || field.trim() === "")
         ) {
-                throw new ApiError(401, "All fields are compulsory");
+                throw new ApiError(400, "All fields are compulsory");
         }
 
         const address = await Address.create({
-                name,
+                firstName,
+                lastName,
                 streetAddress,
                 city,
                 state,
@@ -45,7 +46,15 @@ const addAddress = asyncHandler(async (req, res) => {
                 userId: req.user._id,
         });
 
-        return res.status(201).json(address);
+        return res
+                .status(201)
+                .json(
+                        new ApiResponse(
+                                201,
+                                "Address added successfully",
+                                address,
+                        ),
+                );
 });
 
 // Get address
@@ -53,10 +62,27 @@ const getAddress = asyncHandler(async (req, res) => {
         const address = await Address.findOne({ userId: req.user._id });
 
         if (!address) {
-                throw new ApiError(404, "Address not found");
+                // Return a response indicating no address is found
+                return res
+                        .status(200)
+                        .json(
+                                new ApiResponse(
+                                        200,
+                                        "No address found for this user",
+                                        null,
+                                ),
+                        );
         }
 
-        return res.status(200).json(address);
+        return res
+                .status(200)
+                .json(
+                        new ApiResponse(
+                                200,
+                                address,
+                                "Address retrieved successfully",
+                        ),
+                );
 });
 
 export { addAddress, getAddress };
