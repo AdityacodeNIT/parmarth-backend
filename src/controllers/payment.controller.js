@@ -3,79 +3,73 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { razorpay } from "../utils/razorPay.js";
 import crypto from "crypto";
 const checkout = asyncHandler(async (req, res) => {
-  try {
-    const { amount } = req.body;
+        try {
+                const { amount } = req.body;
 
-    // Create a Razorpay order
-    const options = {
-      amount: amount * 100, // Razorpay expects the amount in paise.
-      currency: "INR",
-      // Auto-capture the payment
-    };
-    const order = await razorpay.orders.create(options);
-    console.log(order);
+                // Create a Razorpay order
+                const options = {
+                        amount: amount * 100, // Razorpay expects the amount in paise.
+                        currency: "INR",
+                        // Auto-capture the payment
+                };
+                const order = await razorpay.orders.create(options);
+                console.log(order);
 
-    // Redirect the user to the Razorpay payment page
-    res.status(200).json({ success: true, order });
-  } 
-  catch (error) {
-    console.error(error);
-    throw new ApiError(500, "Error creating order");
-  }
+                // Redirect the user to the Razorpay payment page
+                res.status(200).json({ success: true, order });
+        } catch (error) {
+                console.error(error);
+                throw new ApiError(500, "Error creating order");
+        }
 });
 
 const paymentCallback = asyncHandler(async (req, res) => {
-  try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
-      req.body;
-      
-    if (!(razorpay_order_id || razorpay_payment_id || razorpay_signature)) {
-      throw new ApiError(400, "unavialable");
-    }
+        try {
+                const {
+                        razorpay_order_id,
+                        razorpay_payment_id,
+                        razorpay_signature,
+                } = req.body;
 
-    // Fetch the secret from your configuration or environment variables
-    const secret = process.env.RAZORPAY_API_SECRET;
+                if (
+                        !(
+                                razorpay_order_id ||
+                                razorpay_payment_id ||
+                                razorpay_signature
+                        )
+                ) {
+                        throw new ApiError(400, "unavialable");
+                }
 
-    // Generate the signature
-    const generated_signature = crypto
-      .createHmac("sha256", secret)
-      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-      .digest("hex");
+                // Fetch the secret from your configuration or environment variables
+                const secret = process.env.RAZORPAY_API_SECRET;
 
-    // Compare the generated signature with the provided signature
-    if (generated_signature !== razorpay_signature) {
-      return res.status(400).send("Invalid payment callback");
-    }
-
-    // If the signatures match, the payment is successful
-    console.log("Payment is successful");
-
-    // Update your database or perform other actions based on payment status
-    console.log(req.body);
-    res.status(200).json({ success: true });
-  } catch (error) {
-    console.error(error);
-    throw new ApiError(500, "Error handling payment callback");
-  }
+                // Generate the signature
+                const generated_signature = crypto
+                        .createHmac("sha256", secret)
+                        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+                        .digest("hex");
+                if (generated_signature !== razorpay_signature) {
+                        return res.status(400).send("Invalid payment callback");
+                }
+                res.status(200).json({ success: true });
+        } catch (error) {
+                throw new ApiError(500, "Error handling payment callback");
+        }
 });
 const transactionVerification = asyncHandler(async (req, res) => {
-  try {
-    const orderId = req.body.payload.payment.entity.order_id;
-    const paymentId = req.body.payload.payment.entity.id;
+        try {
+                const orderId = req.body.payload.payment.entity.order_id;
+                const paymentId = req.body.payload.payment.entity.id;
 
-    if (!(orderId || paymentId)) {
-      throw new ApiError(500, "not secure");
-    }
+                if (!(orderId || paymentId)) {
+                        throw new ApiError(500, "not secure");
+                }
 
-    // Fetch the order details from your database
-
-    // Verify the payment details and update your database
-
-    res.status(200).send("Webhook received successfully");
-  } catch (error) {
-    console.error(error);
-    throw new ApiError(500, "Error verifying transaction");
-  }
+                res.status(200).send("Webhook received successfully");
+        } catch (error) {
+                throw new ApiError(500, "Error verifying transaction");
+        }
 });
 
 export { checkout, paymentCallback, transactionVerification };
