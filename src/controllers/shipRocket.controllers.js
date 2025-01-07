@@ -58,6 +58,7 @@ export const createOrderController = async (req, res) => {
 };
 
 export const getAllOrdersController = async (req, res) => {
+        console.log("request reaches here");
         try {
                 const headers = await getHeaders();
 
