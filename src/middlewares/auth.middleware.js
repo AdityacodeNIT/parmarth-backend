@@ -36,3 +36,28 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
                 throw new ApiError(401, "Invalid Access Token");
         }
 });
+
+export const isAuthenticated = asyncHandler(async (req, res, next) => {
+        try {
+            const token =
+                req.cookies?.accessToken ||
+                req.header("Authorization")?.replace("Bearer ", "").trim();
+    
+            if (token) {
+          
+                const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    
+              
+                const user = await User.findById(decodedToken._id).select("-password -refreshToken");
+    
+                if (user) {
+                    return res.status(400).json({ message: "You are already logged in." });
+                }
+            }
+    
+            next();
+        } catch (error) {
+            // Handle error (could be due to invalid token)
+            next();
+        }
+    });

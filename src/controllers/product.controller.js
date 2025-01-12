@@ -68,9 +68,10 @@ const searchresult = asyncHandler(async (req, res) => {
         const result = await Product.aggregate([
                 {
                         $match: {
-                                name: {
+                                name: { 
                                         $regex: name,
                                         $options: "i",
+                                        
                                 },
                         },
                 },

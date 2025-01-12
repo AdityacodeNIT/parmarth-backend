@@ -47,7 +47,7 @@ export const getHeaders = async () => {
         return {
                 headers: {
                         "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}}`,
+                        Authorization: `Bearer ${token}`,
                 },
         };
 };

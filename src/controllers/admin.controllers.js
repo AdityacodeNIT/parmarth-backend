@@ -17,7 +17,7 @@ const orderlist = async (req, res) => {
                         { $unwind: "$productDetails" },
                         {
                                 $lookup: {
-                                        from: "users", // Collection name for User
+                                        from: "users",
                                         localField: "userId", // Field in Order referencing User
                                         foreignField: "_id",
                                         as: "userDetails",
