@@ -173,7 +173,7 @@ export const getOrder = async (req, res) => {
                 console.error("Error fetching orders:", err.message || err);
                 console.error("Error details:", err.response?.data); // Log the full error response
                 res.status(500).json({
-                        error: err.message || "Failed to fetch orders",
+                        error: err.response.data || "Failed to fetch orders",
                 });
         }
 };
