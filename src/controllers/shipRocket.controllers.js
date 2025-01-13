@@ -139,41 +139,60 @@ export const getAllOrdersController = async (req, res) => {
                         error: err.message || "Failed to fetch orders",
                 });
         }
-};
-export const getOrder = async (req, res) => {
+};export const getOrder = async (req, res) => {
         console.log("Received request at getOrder");
+    
         try {
-                const headers = await getHeaders();
-                const id = req.params.id; // Extract the ID from the request params
-                console.log("Order ID:", id);
-
-                // Log headers to ensure correct Authorization
-                console.log("Request headers:", headers);
-
-                // Log the request URL
-                console.log(
-                        `Making request to: https://apiv2.shiprocket.in/v1/external/orders/show/${id}`,
-                );
-
-                // Make the API request to Shiprocket
-                const response = await axios.get(
-                        `https://apiv2.shiprocket.in/v1/external/orders/show/${id}`,
-                        headers,
-                );
-
-                console.log("Response data:", response.data);
-                const orders = response.data;
-
-                // Send successful response
-                res.status(200).json({
-                        data: orders,
-                        message: "Orders fetched successfully",
-                });
+            const headers = await getHeaders();
+            const id = req.params.id;
+    
+            // Log request details
+            console.log("Fetching order with ID:", id);
+            console.log("Request headers:", JSON.stringify(headers, null, 2));
+            console.log(`Requesting: https://apiv2.shiprocket.in/v1/external/orders/show/${id}`);
+    
+            // Make the API request to Shiprocket
+            const response = await axios.get(
+                `https://apiv2.shiprocket.in/v1/external/orders/show/${id}`,
+                headers
+            );
+    
+            console.log("API Response Data:", response.data);
+    
+            // Return successful response
+            res.status(200).json({
+                success: true,
+                data: response.data,
+                message: `Order ${id} fetched successfully`
+            });
+    
         } catch (err) {
-                console.error("Error fetching orders:", err.message || err);
-                console.error("Error details:", err.response?.data); // Log the full error response
-                res.status(500).json({
-                        error: err.response.data || "Failed to fetch orders",
-                });
+            // Log different error types for better debugging
+            console.error("Error fetching orders:", err.message || err);
+    
+            if (err.response) {
+                console.error("Error Response Status:", err.response.status);
+                console.error("Error Response Data:", err.response.data);
+            } else if (err.request) {
+                console.error("No Response Received. Request Details:", err.request);
+            } else {
+                console.error("Request Error:", err.message);
+            }
+    
+            // Return a descriptive error response
+            res.status(500).json({
+                success: false,
+                error: err.response?.data || err.message || "An unknown error occurred",
+                hint: "Ensure the order ID is valid and headers contain correct authorization",
+                troubleshooting: {
+                    possibleCauses: [
+                        "Invalid Shiprocket API URL or incorrect endpoint",
+                        "Missing or incorrect headers",
+                        "API request rate limit exceeded",
+                        "Order ID not found"
+                    ]
+                }
+            });
         }
-};
+    };
+    
