@@ -2,6 +2,7 @@ import { authenticate, getHeaders, createOrder } from "../utils/ShipRocket.js";
 import { Product } from "../models/product.models.js";
 import { Address } from "../models/address.models.js";
 import axios from "axios";
+import { v4 as uuidv4 } from 'uuid';
 
 // Authenticatication
 authenticate().catch((err) => console.error(err.message));
@@ -20,7 +21,7 @@ export const createOrderController = async (req, res) => {
                 console.log(req.user.email);
 
                 const newOrder = {
-                        order_id: productId,
+                        order_id: uuidv4(),
                         order_date: new Date().toISOString(),
 
                         billing_customer_name: address.firstName,

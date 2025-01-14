@@ -50,8 +50,6 @@ const paymentCallback = asyncHandler(async (req, res) => {
     // If the signatures match, the payment is successful
     console.log("Payment is successful");
 
-    // Update your database or perform other actions based on payment status
-    console.log(req.body);
     res.status(200).json({ success: true });
   } catch (error) {
     console.error(error);
