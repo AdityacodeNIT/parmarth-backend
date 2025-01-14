@@ -1,6 +1,5 @@
 import axios from "axios";
 
-const SHIPROCKET_API_BASE = "https://apiv2.shiprocket.in/v1/external";
 const SHIPROCKET_EMAIL = process.env.SHIPROCKET_EMAIL;
 const SHIPROCKET_PASSWORD = process.env.SHIPROCKET_PASSWORD;
 import { jwtDecode } from "jwt-decode";
@@ -11,7 +10,7 @@ let authToken = null;
 export const authenticate = async () => {
         try {
                 const response = await axios.post(
-                        `${SHIPROCKET_API_BASE}/auth/login`,
+                        `${process.env.SHIPROCKET_API_BASE}/auth/login`,
                         {
                                 email: SHIPROCKET_EMAIL,
                                 password: SHIPROCKET_PASSWORD,
@@ -59,7 +58,7 @@ export const createOrder = async (orderData) => {
         console.log("Order data:", orderData);
         try {
                 const response = await axios.post(
-                        `${SHIPROCKET_API_BASE}/orders/create/adhoc`,
+                        `${process.env.SHIPROCKET_API_BASE}/orders/create/adhoc`,
                         orderData,
                         await getHeaders(),
                 );
