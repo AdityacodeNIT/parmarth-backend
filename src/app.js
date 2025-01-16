@@ -8,7 +8,7 @@ app.use(
         cors({
                 origin: process.env.CORS_ORIGIN.split(","),
                 credentials: true,
-                // the credentails are set to true so that we can send cookies , berer token and others with cors.
+            
         }),
 );
 

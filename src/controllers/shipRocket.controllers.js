@@ -72,7 +72,6 @@ export const getAllOrdersController = async (req, res) => {
 
         try {
                 const headers = await getHeaders();
-
                 // Step 2: Fetch orders from Shiprocket
                 console.log("Fetching orders from Shiprocket...");
                 const response = await axios.get(
@@ -140,7 +139,9 @@ export const getAllOrdersController = async (req, res) => {
                         error: err.message || "Failed to fetch orders",
                 });
         }
-};export const getOrder = async (req, res) => {
+};
+
+export const getOrder = async (req, res) => {
         console.log("Received request at getOrder");
     
         try {
@@ -197,3 +198,13 @@ export const getAllOrdersController = async (req, res) => {
         }
     };
     
+
+// export const cancelOrderController=()={
+//         try {
+//                 const headers = await getHeaders();
+
+//         } catch (error) {
+                
+//         }
+
+// }
