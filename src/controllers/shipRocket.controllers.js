@@ -136,7 +136,7 @@ export const getAllOrdersController = async (req, res) => {
                 });
         } catch (err) {
                 res.status(500).json({
-                        error: err.message || "Failed to fetch orders",
+                        error: err.response?.data || err.message || "An unknown error occurred",
                 });
         }
 };
