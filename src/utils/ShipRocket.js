@@ -13,8 +13,8 @@ export const authenticate = async () => {
                 const response = await axios.post(
                         `${process.env.SHIPROCKET_API_BASE}/auth/login`,
                         {
-                                email: SHIPROCKET_EMAIL,
-                                password: SHIPROCKET_PASSWORD,
+                                email: process.env.SHIPROCKET_EMAIL,
+                                password: process.env.SHIPROCKET_PASSWORD,
                         },
                 );
                 authToken = response.data.token;
