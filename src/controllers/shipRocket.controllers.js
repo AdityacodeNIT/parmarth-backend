@@ -81,28 +81,19 @@ export const getAllOrdersController = async (req, res) => {
 
                 let orders = response.data;
 
-                console.log(req.user.email);
-
-                // console.log(orders.data);
-
-                // Log only the customer_email for each order
-                console.log(orders.data[0].customer_email);
-
-                for (let order of orders.data) {
-                        console.log(order.customer_email); // Logs the email of each order
-                }
+                if (!orders.data || !Array.isArray(orders.data)) {
+                        console.error('Invalid response from Shiprocket:', orders);
+                        return res.status(500).json({ error: 'Invalid response from Shiprocket' });
+                    }
+                    
 
                 if (req.user.isAdmin === "false") {
                         console.log("Filtering orders for the regular user...");
-
-                        // Check if orders.data is an array
                         if (Array.isArray(orders.data)) {
                                 console.log(
                                         "orders.data is an array. Proceeding with filtering...",
                                 );
 
-                                // Log the email being checked for filtering
-                                console.log("User email:", req.user.email);
 
                                 // Filter the orders and log details of each order being checked
                                 const filteredOrders = orders.data.filter(
