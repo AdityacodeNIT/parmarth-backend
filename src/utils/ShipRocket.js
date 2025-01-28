@@ -1,8 +1,9 @@
 import axios from "axios";
+import {jwtDecode}  from "jwt-decode";
 
 const SHIPROCKET_EMAIL = process.env.SHIPROCKET_EMAIL;
 const SHIPROCKET_PASSWORD = process.env.SHIPROCKET_PASSWORD;
-import { jwtDecode } from "jwt-decode";
+
 
 let authToken = null;
 
@@ -23,7 +24,7 @@ export const authenticate = async () => {
                         "Shiprocket authentication failed:",
                         error.response?.data,
                 );
-                throw new Error("Authentication failed");
+                throw new Error("Authentication failed ho gya hai broo");
         }
 };
 
@@ -40,9 +41,10 @@ const isTokenExpired = (token) => {
         return exp < currentTime;
 };
 
-// Use this function in other requests:
 export const getHeaders = async () => {
+
         const token = await getAuthToken();
+
         return {
                 headers: {
                         "Content-Type": "application/json",
@@ -51,9 +53,6 @@ export const getHeaders = async () => {
         };
 };
 
-// Create headers
-
-// Create an order
 export const createOrder = async (orderData) => {
         console.log("Order data:", orderData);
         try {

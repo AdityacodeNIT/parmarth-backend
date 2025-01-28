@@ -77,8 +77,6 @@ export const getAllOrdersController = async (req, res) => {
                 return res.status(401).json({ error: 'User not authenticated' });
             }
     
-            console.log('User:', req.user);
-    
             const headers = await getHeaders();
     
             // Fetch orders from Shiprocket
@@ -92,7 +90,6 @@ export const getAllOrdersController = async (req, res) => {
                 );
                 orders = response.data;
             } catch (shiprocketError) {
-                // Error occurred while calling Shiprocket API
                 console.error('Error fetching orders from Shiprocket:', shiprocketError);
     
                 // Check if Shiprocket provided a response
