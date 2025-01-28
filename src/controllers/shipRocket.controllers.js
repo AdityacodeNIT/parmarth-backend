@@ -69,69 +69,83 @@ export const createOrderController = async (req, res) => {
 
 export const getAllOrdersController = async (req, res) => {
         console.log("Received request at getAllOrdersController");
-
+    
         try {
-                const headers = await getHeaders();
-                // Step 2: Fetch orders from Shiprocket
-                console.log("Fetching orders from Shiprocket...");
+            // Ensure req.user is defined
+            if (!req.user) {
+                console.error('User not authenticated');
+                return res.status(401).json({ error: 'User not authenticated' });
+            }
+    
+            console.log('User:', req.user);
+    
+            const headers = await getHeaders();
+    
+            // Fetch orders from Shiprocket
+            console.log("Fetching orders from Shiprocket...");
+    
+            let orders;
+            try {
                 const response = await axios.get(
-                        "https://apiv2.shiprocket.in/v1/external/orders",
-                        headers,
+                    "https://apiv2.shiprocket.in/v1/external/orders",
+                    headers,
                 );
-
-                let orders = response.data;
-
-                if (!orders.data || !Array.isArray(orders.data)) {
-                        console.error('Invalid response from Shiprocket:', orders);
-                        return res.status(500).json({ error: 'Invalid response from Shiprocket' });
-                    }
-                    
-
-                if (req.user.isAdmin === "false") {
-                        console.log("Filtering orders for the regular user...");
-                        if (Array.isArray(orders.data)) {
-                                console.log(
-                                        "orders.data is an array. Proceeding with filtering...",
-                                );
-
-
-                                // Filter the orders and log details of each order being checked
-                                const filteredOrders = orders.data.filter(
-                                        (order) => {
-                                                console.log(
-                                                        "Order customer email:",
-                                                        order.customer_email,
-                                                );
-                                                return (
-                                                        order.customer_email ===
-                                                        req.user.email
-                                                ); // Return the comparison result
-                                        },
-                                );
-
-                                // Maintain the original structure
-                                orders.data = filteredOrders;
-                        } else {
-                                console.log(
-                                        "orders.data is not an array:",
-                                        orders.data,
-                                );
-                        }
+                orders = response.data;
+            } catch (shiprocketError) {
+                // Error occurred while calling Shiprocket API
+                console.error('Error fetching orders from Shiprocket:', shiprocketError);
+    
+                // Check if Shiprocket provided a response
+                if (shiprocketError.response) {
+                    // Shiprocket responded with an error status code
+                    const statusCode = shiprocketError.response.status || 502; // Use 502 Bad Gateway if status code is not provided
+                    const shiprocketMessage = shiprocketError.response.data.message || 'Error from Shiprocket API';
+    
+                    return res.status(statusCode).json({
+                        error: `Shiprocket API error: ${shiprocketMessage}`,
+                    });
+                } else if (shiprocketError.request) {
+                    // No response received from Shiprocket
+                    return res.status(504).json({
+                        error: 'No response from Shiprocket API (Gateway Timeout)',
+                    });
                 } else {
-                        console.log("Admin user. No filtering applied.");
+                    // Other errors
+                    return res.status(500).json({
+                        error: `Error while communicating with Shiprocket API: ${shiprocketError.message}`,
+                    });
                 }
-
-                res.status(200).json({
-                        data: orders,
-                        message: "Orders fetched successfully",
+            }
+    
+            // Continue processing orders
+            if (!orders.data || !Array.isArray(orders.data)) {
+                console.error('Invalid response format from Shiprocket:', orders);
+                return res.status(500).json({ error: 'Invalid response from Shiprocket API' });
+            }
+    
+            if (req.user.isAdmin === "false") {
+                console.log("Filtering orders for the regular user...");
+                const filteredOrders = orders.data.filter(order => {
+                    console.log("Order customer email:", order.customer_email);
+                    return order.customer_email === req.user.email;
                 });
+                orders.data = filteredOrders;
+            } else {
+                console.log("Admin user. No filtering applied.");
+            }
+    
+            res.status(200).json({
+                data: orders,
+                message: "Orders fetched successfully",
+            });
         } catch (err) {
-                res.status(500).json({
-                        error: err.response?.data || err.message || "An unknown error occurred",
-                });
+            // Handle any other errors that may occur
+            console.error('Error in getAllOrdersController:', err);
+            res.status(500).json({
+                error: err.message || "An unknown error occurred",
+            });
         }
-};
-
+    };
 export const getOrder = async (req, res) => {
         console.log("Received request at getOrder");
     
