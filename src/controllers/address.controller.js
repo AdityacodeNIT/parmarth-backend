@@ -5,6 +5,7 @@ import { Address } from "../models/address.models.js";
 
 // Add address
 const addAddress = asyncHandler(async (req, res) => {
+      
         const {
                 firstName,
                 lastName,
@@ -17,6 +18,7 @@ const addAddress = asyncHandler(async (req, res) => {
                 alternateNumber,
         } = req.body;
 
+       
         if (
                 [
                         firstName,
@@ -29,9 +31,9 @@ const addAddress = asyncHandler(async (req, res) => {
                         phoneNumber,
                         alternateNumber,
                 ].some((field) => !field || field.trim() === "")
-        ) {
-                throw new ApiError(400, "All fields are compulsory");
-        }
+        )
+
+         {   throw new ApiError(400, "All fields are compulsory"); }
 
         const address = await Address.create({
                 firstName,
@@ -61,7 +63,7 @@ const addAddress = asyncHandler(async (req, res) => {
 const getAddress = asyncHandler(async (req, res) => {
         const address = await Address.findOne({ userId: req.user._id });
 
-        if (!address) {
+        if (!address) {  
                 // Return a response indicating no address is found
                 return res
                         .status(200)
@@ -86,3 +88,4 @@ const getAddress = asyncHandler(async (req, res) => {
 });
 
 export { addAddress, getAddress };
+
