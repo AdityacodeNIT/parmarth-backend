@@ -142,7 +142,17 @@ export const getAllOrdersController = async (req, res) => {
             // Handle any other errors that may occur
             console.error('Error in getAllOrdersController:', err);
             res.status(500).json({
-                error: err.message || "An unknown error occurred",
+                success: false,
+                error: err.response?.data || err.message || "An unknown error occurred",
+                hint: "Ensure the order ID is valid and headers contain correct authorization",
+                troubleshooting: {
+                    possibleCauses: [
+                        "Invalid Shiprocket API URL or incorrect endpoint",
+                        "Missing or incorrect headers",
+                        "API request rate limit exceeded",
+                        "Order ID not found"
+                    ]
+                }
             });
         }
     };
