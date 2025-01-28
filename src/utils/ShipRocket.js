@@ -1,8 +1,7 @@
 import axios from "axios";
 import {jwtDecode}  from "jwt-decode";
 
-const SHIPROCKET_EMAIL = process.env.SHIPROCKET_EMAIL;
-const SHIPROCKET_PASSWORD = process.env.SHIPROCKET_PASSWORD;
+
 
 
 let authToken = null;
@@ -16,6 +15,10 @@ export const authenticate = async () => {
                                 email: process.env.SHIPROCKET_EMAIL,
                                 password: process.env.SHIPROCKET_PASSWORD,
                         },
+                       { headers: {
+                                'Content-Type': 'application/json',
+                              },
+                        }
                 );
                 authToken = response.data.token;
                 console.log("Shiprocket authenticated successfully!");
