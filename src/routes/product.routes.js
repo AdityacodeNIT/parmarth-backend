@@ -7,6 +7,7 @@ import {
         FillingProduct,
         PaperProduct,
         DeskSupplies,
+        getTrendingProduct,
         getProduct,
         searchresult,
 } from "../controllers/product.controller.js";
@@ -24,6 +25,8 @@ router.route("/ReusableProduct").get(ReusableProduct);
 router.route("/FillingProduct").get(FillingProduct);
 router.route("/DeskSupplies").get(DeskSupplies);
 router.route("/getProduct").get(getProduct);
+router.route("/getTrendingProduct").get(getTrendingProduct);
+
 router.route("/searchProduct").post(searchresult);
 
 export default router;

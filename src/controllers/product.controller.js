@@ -137,7 +137,20 @@ const DeskSupplies = asyncHandler(async (req, res) => {
         }
 });
 
+const getTrendingProduct=asyncHandler(async(req,res)=>{
+        const products = await Product.aggregate([
+                { $sort: { bought: -1 } },  // Sort by 'bought' in descending order (highest first)
+                { $limit: 5 }               // Limit to 5 products
+              ]);
+              if (!products) {
+                throw new ApiError(404, "Product does not found ");
+        } else {
+                res.json(products);
+        }
+})
+
 export {
+        getTrendingProduct,
         addProduct,
         WritingProduct,
         DeskSupplies,

@@ -9,7 +9,7 @@ import { app } from "./app.js";
 connectDB()
         .then(() => {
                 app.on("error", (error) => {
-                        console.log("errr", error);
+        
                         throw error;
                 });
                 app.listen(process.env.PORT || 8000, () => {

@@ -20,13 +20,11 @@ export const authenticate = async () => {
                               },
                         }
                 );
-                authToken = response.data.token;
+               
+                authToken = response.data?.token;
+              
                 console.log("Shiprocket authenticated successfully!");
         } catch (error) {
-                console.error(
-                        "Shiprocket authentication failed:",
-                        error.response?.data,
-                );
                 throw new Error("Authentication failed ho gya hai broo");
         }
 };
@@ -57,7 +55,7 @@ export const getHeaders = async () => {
 };
 
 export const createOrder = async (orderData) => {
-        console.log("Order data:", orderData);
+      
         try {
                 const response = await axios.post(
                         `${process.env.SHIPROCKET_API_BASE}/orders/create/adhoc`,
@@ -66,10 +64,6 @@ export const createOrder = async (orderData) => {
                 );
                 return response.data;
         } catch (error) {
-                console.error(
-                        "Failed to create Shiprocket order:",
-                        error.response?.data,
-                );
                 throw new Error("Order creation failed");
         }
 };

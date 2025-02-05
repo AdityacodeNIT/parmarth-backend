@@ -14,11 +14,17 @@ export const createOrderController = async (req, res) => {
                 const { productId, quantity, Address_id } = req.body.items[0];
 
                 const product = await Product.findById(productId);
+               
+                await Product.updateOne(
+                    { _id: productId },
+                    [
+                      { $set: { bought: { $add: ["$bought", 1] } } } // Increment 'bought' by 1
+                    ]
+                  );
+                
+
                 const address = await Address.findById(Address_id);
 
-                console.log(product);
-                console.log(address);
-                console.log(req.user.email);
 
                 const newOrder = {
                         order_id: uuidv4(),
@@ -211,12 +217,3 @@ export const getOrder = async (req, res) => {
     };
     
 
-// export const cancelOrderController=()={
-//         try {
-//                 const headers = await getHeaders();
-
-//         } catch (error) {
-                
-//         }
-
-// }

@@ -6,7 +6,7 @@ const checkout = asyncHandler(async (req, res) => {
   try {
     const { amount } = req.body;
 
-    // Create a Razorpay order
+ 
     const options = {
       amount: amount * 100, // Razorpay expects the amount in paise.
       currency: "INR",
@@ -47,7 +47,6 @@ const paymentCallback = asyncHandler(async (req, res) => {
       return res.status(400).send("Invalid payment callback");
     }
 
-    // If the signatures match, the payment is successful
     console.log("Payment is successful");
 
     res.status(200).json({ success: true });
@@ -71,7 +70,7 @@ const transactionVerification = asyncHandler(async (req, res) => {
 
     res.status(200).send("Webhook received successfully");
   } catch (error) {
-    console.error(error);
+   
     throw new ApiError(500, "Error verifying transaction");
   }
 });

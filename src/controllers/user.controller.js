@@ -7,15 +7,15 @@ import Jwt from "jsonwebtoken";
 
 /*this is the function for generating access tokenwhere we can use these
                 token by exporting them from dataset because they are quite common*/
-
+const activeRefreshToken=new Map();
+                 
 const generateAccessAndRefreshtoken = async (userId) => {
         try {
                 const user = await User.findById(userId);
                 const accessToken = user.generateAccessToken();
                 const refreshToken = user.generateRefreshToken();
 
-                user.refreshToken = refreshToken;
-                await user.save({ validateBeforeSave: false });
+           activeRefreshToken.set(userId.toString(),refreshToken);
                 return { accessToken, refreshToken };
         } catch (error) {
                 throw new ApiError(
@@ -182,11 +182,7 @@ const logOutUser = asyncHandler(async (req, res) => {
                         .json(new ApiResponse(401, {}, "Unauthorized"));
         }
 
-        await User.findByIdAndUpdate(
-                req.user?._id,
-                { $unset: { refreshToken: 1 } },
-                { new: true },
-        );
+        activeRefreshToken.delete(req.user._id.toString());
 
         const options = {
                 httpOnly: true,
@@ -213,20 +209,13 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
                         process.env.REFRESH_TOKEN_SECRET,
                 );
 
-                const user = await User.findById(decodedToken?._id);
-                if (!user) {
-                        throw new ApiError(401, "Invalid refresh token");
-                }
+                const userId = decodedToken?.id || decodedToken?._id; 
 
-                console.log(incomingrefreshToken);
-                console.log(user.refreshToken);
-
-                if (incomingrefreshToken !== user.refreshToken) {
-                        throw new ApiError(
-                                401,
-                                "Refresh token is expired or does not match",
-                        );
-                }
+                const storedRefreshToken= activeRefreshToken.get(userId);
+                console.log(storedRefreshToken);
+                if (!storedRefreshToken || storedRefreshToken !== incomingrefreshToken) {
+                        throw new ApiError(401, "Refresh token is invalid or expired");
+                    }
 
                 const options = {
                         httpOnly: true,
@@ -235,7 +224,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
                 };
 
                 const { accessToken, refreshToken } =
-                        await generateAccessAndRefreshtoken(user._id);
+                        await generateAccessAndRefreshtoken(userId);
 
                 return res
                         .status(200)
