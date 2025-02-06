@@ -10,7 +10,7 @@ authenticate().catch((err) => console.error(err.message));
 // Controller function for the  Shiprocket order
 export const createOrderController = async (req, res) => {
         try {
-                console.log(" ye hai bhau ", req.body);
+              
                 const { productId, quantity, Address_id } = req.body.items[0];
 
                 const product = await Product.findById(productId);
@@ -59,11 +59,11 @@ export const createOrderController = async (req, res) => {
                         weight: product.weight / 200,
                 };
 
-                console.log("the value is", newOrder);
+            
 
                 const result = await createOrder(newOrder);
 
-                console.log(result);
+          
                 res.status(201).json({
                         data: result,
                         message: "Order created successfully",
@@ -129,7 +129,7 @@ export const getAllOrdersController = async (req, res) => {
             if (req.user.isAdmin === "false") {
                 console.log("Filtering orders for the regular user...");
                 const filteredOrders = orders.data.filter(order => {
-                    console.log("Order customer email:", order.customer_email);
+              
                     return order.customer_email === req.user.email;
                 });
                 orders.data = filteredOrders;
@@ -166,10 +166,7 @@ export const getOrder = async (req, res) => {
             const headers = await getHeaders();
             const id = req.params.id;
     
-            // Log request details
-            console.log("Fetching order with ID:", id);
-            console.log("Request headers:", JSON.stringify(headers, null, 2));
-            console.log(`Requesting: https://apiv2.shiprocket.in/v1/external/orders/show/${id}`);
+          
     
             // Make the API request to Shiprocket
             const response = await axios.get(
@@ -177,7 +174,6 @@ export const getOrder = async (req, res) => {
                 headers
             );
     
-            console.log("API Response Data:", response.data);
     
             // Return successful response
             res.status(200).json({
