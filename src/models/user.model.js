@@ -1,6 +1,8 @@
 import mongoose, { Schema } from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+dotenv.config();
 
 const userSchema = new Schema(
         {
@@ -38,6 +40,7 @@ const userSchema = new Schema(
                 },
                 refreshToken: {
                         type: String,
+                        trim:true,
                 },
                 isAdmin: {
                         type: String,
@@ -81,6 +84,7 @@ userSchema.methods.generateRefreshToken = function () {
                         email: this.email,
                 },
                 process.env.REFRESH_TOKEN_SECRET,
+                
                 {
                         expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
                 },

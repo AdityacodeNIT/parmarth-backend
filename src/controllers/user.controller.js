@@ -212,7 +212,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
                 const userId = decodedToken?.id || decodedToken?._id; 
 
                 const storedRefreshToken= activeRefreshToken.get(userId);
-                console.log(storedRefreshToken);
+              
                 if (!storedRefreshToken || storedRefreshToken !== incomingrefreshToken) {
                         throw new ApiError(401, "Refresh token is invalid or expired");
                     }
