@@ -13,7 +13,7 @@ const review = asyncHandler(async (req, res) => {
         // Return the created review and the total count of reviews
         return res.status(201).json(new ApiResponse(200, reviews));
 });
-// Function to calculate average rating using MongoDB aggregation
+
 const averageReview = asyncHandler(async (req, res) => {
         const { productId } = req.body;
         // Convert productId to ObjectId

@@ -5,73 +5,106 @@ import axios from "axios";
 import { v4 as uuidv4 } from 'uuid';
 
 // Authenticatication
+
+
+
+const generateSKU = (name) => {
+    return name.toLowerCase() // Convert to lowercase
+        .replace(/\s+/g, "_") // Replace spaces with underscores
+        .replace(/[^a-z0-9_]/g, "") // Remove special characters
+        .slice(0, 15) + "_" + Math.floor(1000 + Math.random() * 9000); // Add random 4-digit number
+};
+
+
+
+
+// Authentication
 authenticate().catch((err) => console.error(err.message));
 
-// Controller function for the  Shiprocket order
 export const createOrderController = async (req, res) => {
-        try {
-              
-                const { productId, quantity, Address_id } = req.body.items[0];
+    try {
+        const { items } = req.body;
+        console.log(items);
 
-                const product = await Product.findById(productId);
-               
-                await Product.updateOne(
-                    { _id: productId },
-                    [
-                      { $set: { bought: { $add: ["$bought", 1] } } } // Increment 'bought' by 1
-                    ]
-                  );
-                
+        if (!items || items.length === 0) {
+            return res.status(400).json({ error: "No items provided" });
+        }
 
+        const orders = [];
+        const groupedOrders = {};
+
+        for (const item of items) {
+            const { productId, quantity, Address_id } = item;
+            const product = await Product.findById(productId);
+
+            if (!product) {
+                return res.status(404).json({ error: `Product with ID ${productId} not found` });
+            }
+
+            await Product.updateOne(
+                { _id: productId },
+                [
+                  { $set: { bought: { $add: ["$bought", 1] } } } // Increment 'bought' by 1
+                ]
+              );
+
+            if (!groupedOrders[Address_id]) {
                 const address = await Address.findById(Address_id);
 
+                if (!address) {
+                    return res.status(404).json({ error: "Address not found" });
+                }
 
-                const newOrder = {
-                        order_id: uuidv4(),
-                        order_date: new Date().toISOString(),
+                groupedOrders[Address_id] = {
+                    order_id: uuidv4(),
+                    order_date: new Date().toISOString(),
 
-                        billing_customer_name: address.firstName,
-                        billing_last_name: address.lastName,
-                        billing_address: address.streetAddress,
-                        billing_city: address.city,
-                        billing_pincode: address.postalCode,
-                        billing_state: address.state,
-                        billing_country: address.country,
-                        billing_email: req.user?.email,
-                        billing_phone: address.phoneNumber,
-                        shipping_is_billing: true,
+                    billing_customer_name: address.firstName,
+                    billing_last_name: address.lastName,
+                    billing_address: address.streetAddress,
+                    billing_city: address.city,
+                    billing_pincode: address.postalCode,
+                    billing_state: address.state,
+                    billing_country: address.country,
+                    billing_email: req.user?.email,
+                    billing_phone: address.phoneNumber,
+                    shipping_is_billing: true,
 
-                        order_items: [
-                                {
-                                        name: product.name,
-                                        sku: "DEFAULTSKU",
-                                        units: quantity,
-                                        selling_price: product.price,
-                                        discount: 0,
-                                        tax: product.price * 0.18,
-                                },
-                        ],
-                        payment_method: "Prepaid",
-                        sub_total: product.price * quantity,
-                        length: product.length,
-                        breadth: product.breadth,
-                        height: product.height,
-                        weight: product.weight / 200,
+                    order_items: [],
+                    payment_method: "Prepaid",
+                    sub_total: 0,
+                    length: 10, // Default values for now
+                    breadth: 10,
+                    height: 10,
+                    weight: 1,
                 };
+            }
 
-            
+            groupedOrders[Address_id].order_items.push({
+                name: product.name,
+                sku: generateSKU(product.name),
+                units: quantity,
+                selling_price: product.price,
+                discount: 0,
+                tax: product.price * 0.18,
+            });
 
-                const result = await createOrder(newOrder);
-
-          
-                res.status(201).json({
-                        data: result,
-                        message: "Order created successfully",
-                });
-        } catch (error) {
-                res.status(500).json({ error: error.message });
+            groupedOrders[Address_id].sub_total += product.price * quantity;
         }
+        console.log("ORDER IS",groupedOrders);
+
+        const result = await createOrder(groupedOrders);
+
+
+        res.status(201).json({
+            data: result,
+            message: "Order created successfully",
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 };
+
 
 export const getAllOrdersController = async (req, res) => {
         console.log("Received request at getAllOrdersController");

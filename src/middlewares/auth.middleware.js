@@ -6,7 +6,7 @@ import { User } from "../models/user.model.js";
 export const verifyJWT = asyncHandler(async (req, _, next) => {
         try {
                 const token =
-                        req.cookies?.accessToken ||
+                        req.cookies.accessToken ||
                         req
                                 .header("Authorization")
                                 ?.replace("Bearer ", "")
@@ -57,7 +57,7 @@ export const isAuthenticated = asyncHandler(async (req, res, next) => {
     
             next();
         } catch (error) {
-            // Handle error (could be due to invalid token)
+         
             next();
         }
     });

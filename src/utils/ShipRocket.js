@@ -6,7 +6,6 @@ import {jwtDecode}  from "jwt-decode";
 
 let authToken = null;
 
-// Authenticate with Shiprocket
 export const authenticate = async () => {
         try {
                 const response = await axios.post(
@@ -54,16 +53,33 @@ export const getHeaders = async () => {
         };
 };
 
-export const createOrder = async (orderData) => {
-      
+export const createOrder = async (orders) => {
         try {
-                const response = await axios.post(
-                        `${process.env.SHIPROCKET_API_BASE}/orders/create/adhoc`,
-                        orderData,
-                        await getHeaders(),
-                );
-                return response.data;
+                console.log("utils ka",orders);
+            const responses = await Promise.all(
+                Object.values(orders).map(async (orderData) => {
+                        console.log("aalu ka",orderData);
+                try {
+                        
+                            const response = await axios.post(
+                                `${process.env.SHIPROCKET_API_BASE}/orders/create/adhoc`,
+                                orderData,
+                                await getHeaders()
+                            );
+        
+                            console.log(response);
+                            return response.data;
+                }
+                   
+
+                    catch (error) {
+                        console.error("API Request Failed:", error.response?.data || error.message);
+                    }
+                })
+            );
+            return responses;
         } catch (error) {
-                throw new Error("Order creation failed");
+            throw new Error("Bulk order creation failed");
         }
-};
+    };
+    
