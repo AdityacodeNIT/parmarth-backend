@@ -30,10 +30,12 @@ import adminRouter from "./routes/admin.routes.js";
 import shiprouter from "./routes/shiprocket.routes.js";
 import interactionRouter from "./routes/interaction.routes.js";
 import Subscriberouter from "./routes/subscriber.routes.js";
+import sellerRouter from "./routes/seller.routes.js";
 
 
 //routes Decleration
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/seller", sellerRouter);
 app.use("/api/v1/product", productRouter);
 app.use("/api/v1/address", addressRouter);
 app.use("/api/v2/payments", paymentRouter);
@@ -43,6 +45,7 @@ app.use("/api/v2/admin", adminRouter);
 app.use("/shiprocket", shiprouter);
 app.use("/api/activity",interactionRouter);
 app.use("/api/v1", Subscriberouter);
+
 
 
 app.get("/api/getKey", (req, res) =>
