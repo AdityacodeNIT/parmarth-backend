@@ -47,7 +47,6 @@ const paymentCallback = asyncHandler(async (req, res) => {
       return res.status(400).send("Invalid payment callback");
     }
 
-    console.log("Payment is successful");
 
     res.status(200).json({ success: true });
   } catch (error) {
@@ -64,9 +63,7 @@ const transactionVerification = asyncHandler(async (req, res) => {
       throw new ApiError(500, "not secure");
     }
 
-    // Fetch the order details from your database
 
-    // Verify the payment details and update your database
 
     res.status(200).send("Webhook received successfully");
   } catch (error) {

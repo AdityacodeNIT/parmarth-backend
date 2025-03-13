@@ -22,7 +22,7 @@ export const authenticate = async () => {
                
                 authToken = response.data?.token;
               
-                console.log("Shiprocket authenticated successfully!");
+             
         } catch (error) {
                 throw new Error("Authentication failed ho gya hai broo");
         }
@@ -55,10 +55,10 @@ export const getHeaders = async () => {
 
 export const createOrder = async (orders) => {
         try {
-                console.log("utils ka",orders);
+          
             const responses = await Promise.all(
                 Object.values(orders).map(async (orderData) => {
-                        console.log("aalu ka",orderData);
+                    
                 try {
                         
                             const response = await axios.post(
@@ -67,7 +67,7 @@ export const createOrder = async (orders) => {
                                 await getHeaders()
                             );
         
-                            console.log(response);
+                          
                             return response.data;
                 }
                    

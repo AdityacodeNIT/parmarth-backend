@@ -3,64 +3,61 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Product } from "../models/product.models.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import detectObjects from "../utils/detect.object.js";
+import fs from "fs";
+
+
 
 const addProduct = asyncHandler(async (req, res) => {
-        const {
-                name,
-                price,
-                description,
-                Category,
-                stocks,
-                length,
-                breadth,
-                height,
-                weight,
-        } = req.body;
+    const { name, price, description, Category, stocks, ...optionalFields } = req.body;
 
-        if ([name, price].some((feild) => feild.trim === "")) {
-                throw new ApiError(401, "all feilds are comlusory");
-        }
-        const existedProduct = await Product.findOne({
-                $or: [{ name }],
-        });
-        if (existedProduct) {
-                throw new ApiError(409, "Product Already exist");
-        }
+    // Validate required fields
+    if (!name?.trim() || !price) {
+        throw new ApiError(400, "Name and Price are required.");
+    }
 
-        // local path from multer
-        const ProductImagelocalPath = req.file?.path;
+    // Check if product already exists
+    const existedProduct = await Product.findOne({ name });
+    if (existedProduct) {
+        throw new ApiError(409, "Product already exists.");
+    }
 
-        if (!ProductImagelocalPath) {
-                throw new ApiError(400, "product Image is required");
-        }
+    // Check for product image from multer
+    const ProductImagelocalPath = req.file?.path;
+    if (!ProductImagelocalPath) {
+        throw new ApiError(400, "Product image is required.");
+    }
 
-        // Url from the cloudinary
-        const ProductImage = await uploadOnCloudinary(ProductImagelocalPath);
-        if (!ProductImage) {
-                throw new ApiError(400, "Product is needed");
+    // Upload image to Cloudinary
+    const uploadedImage = await uploadOnCloudinary(ProductImagelocalPath);
+    if (!uploadedImage) {
+        throw new ApiError(400, "Failed to upload product image.");
+    }
+
+    // Prepare product object (Always include required fields)
+    const productData = {
+        name,
+        price,
+        description,
+        Category,
+        ProductImage: uploadedImage.url,
+        stocks,
+    };
+
+    // Assign only the optional fields that exist in the request
+    Object.keys(optionalFields).forEach((key) => {
+        if (optionalFields[key] !== undefined) {
+            productData[key] = optionalFields[key];
         }
-        const product = await Product.create({
-                name,
-                price,
-                description,
-                Category,
-                ProductImage: ProductImage.url,
-                stocks,
-                length,
-                breadth,
-                height,
-                weight,
-        });
-        return res
-                .status(201)
-                .json(
-                        new ApiResponse(
-                                200,
-                                product,
-                                "Product added  succesfully",
-                        ),
-                );
+    });
+
+    // Save product to database
+    const product = await Product.create(productData);
+
+    return res.status(201).json(new ApiResponse(201, product, "Product added successfully."));
 });
+
+
 
 const searchresult = asyncHandler(async (req, res) => {
         const { name } = req.body;
@@ -80,8 +77,37 @@ const searchresult = asyncHandler(async (req, res) => {
         return res.json({ result });
 });
 
+
+
+
+export const searchByImage = async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+        // Read the uploaded image
+        const imageBuffer = fs.readFileSync(req.file.path);
+
+        // **AI Detects Objects in Image**
+        const detectedObjects = await detectObjects(imageBuffer);
+
+        // **Find Matching Products in MongoDB**
+        let foundProducts = [];
+        for (const obj of detectedObjects) {
+            const products = await Product.find({ category: obj.label }); // Match category
+            foundProducts = [...foundProducts, ...products];
+        }
+
+        res.json({ products: foundProducts });
+
+    } catch (error) {
+        console.error("Error in AI Image Search:", error);
+        res.status(500).json({ error: "Server Error" });
+    }
+};
+
+
 const getProduct = asyncHandler(async (req, res) => {
-        const product = await Product.find();
+        const product = await Product.find().sort({ createdAt: -1 });
 
         if (!product) {
                 throw new ApiError(404, "Product does not found ");
@@ -91,7 +117,7 @@ const getProduct = asyncHandler(async (req, res) => {
 });
 
 const FillingProduct = asyncHandler(async (req, res) => {
-        const product = await Product.find({ Category: "Filling" });
+        const product = await Product.find({ Category: "Filling" }).sort({ createdAt: -1 });;
 
         if (!product) {
                 throw new ApiError(404, "Product does not found ");
@@ -100,7 +126,7 @@ const FillingProduct = asyncHandler(async (req, res) => {
         }
 });
 const ReusableProduct = asyncHandler(async (req, res) => {
-        const product = await Product.find({ Category: "Reusable" });
+        const product = await Product.find({ Category: "Reusable" }).sort({ createdAt: -1 });;
 
         if (!product) {
                 throw new ApiError(404, "Product does not found ");
@@ -109,7 +135,7 @@ const ReusableProduct = asyncHandler(async (req, res) => {
         }
 });
 const WritingProduct = asyncHandler(async (req, res) => {
-        const product = await Product.find({ Category: "Writing" });
+        const product = await Product.find({ Category: "Writing" }).sort({ createdAt: -1 });;
 
         if (!product) {
                 throw new ApiError(404, "Product does not found ");
@@ -118,7 +144,7 @@ const WritingProduct = asyncHandler(async (req, res) => {
         }
 });
 const PaperProduct = asyncHandler(async (req, res) => {
-        const product = await Product.find({ Category: "Paper" });
+        const product = await Product.find({ Category: "Paper" }).sort({ createdAt: -1 });;
 
         if (!product) {
                 throw new ApiError(404, "Product does not found ");
@@ -128,7 +154,7 @@ const PaperProduct = asyncHandler(async (req, res) => {
 });
 
 const DeskSupplies = asyncHandler(async (req, res) => {
-        const product = await Product.find({ Category: "DeskSupplies" });
+        const product = await Product.find({ Category: "DeskSupplies" }).sort({ createdAt: -1 });;
 
         if (!product) {
                 throw new ApiError(404, "Product does not found ");

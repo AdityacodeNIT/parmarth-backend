@@ -24,7 +24,7 @@ authenticate().catch((err) => console.error(err.message));
 export const createOrderController = async (req, res) => {
     try {
         const { items } = req.body;
-        console.log(items);
+      
 
         if (!items || items.length === 0) {
             return res.status(400).json({ error: "No items provided" });
@@ -91,7 +91,7 @@ export const createOrderController = async (req, res) => {
 
             groupedOrders[Address_id].sub_total += product.price * quantity;
         }
-        console.log("ORDER IS",groupedOrders);
+      
 
         const result = await createOrder(groupedOrders);
 
@@ -107,7 +107,7 @@ export const createOrderController = async (req, res) => {
 
 
 export const getAllOrdersController = async (req, res) => {
-        console.log("Received request at getAllOrdersController");
+    
     
         try {
             // Ensure req.user is defined
@@ -119,7 +119,7 @@ export const getAllOrdersController = async (req, res) => {
             const headers = await getHeaders();
     
             // Fetch orders from Shiprocket
-            console.log("Fetching orders from Shiprocket...");
+         
     
             let orders;
             try {
@@ -160,14 +160,14 @@ export const getAllOrdersController = async (req, res) => {
             }
     
             if (req.user.isAdmin === "false") {
-                console.log("Filtering orders for the regular user...");
+             
                 const filteredOrders = orders.data.filter(order => {
               
                     return order.customer_email === req.user.email;
                 });
                 orders.data = filteredOrders;
             } else {
-                console.log("Admin user. No filtering applied.");
+                console.log("Admin user detected. Returning all orders...");
             }
     
             res.status(200).json({
@@ -193,7 +193,7 @@ export const getAllOrdersController = async (req, res) => {
         }
     };
 export const getOrder = async (req, res) => {
-        console.log("Received request at getOrder");
+      
     
         try {
             const headers = await getHeaders();
@@ -244,5 +244,65 @@ export const getOrder = async (req, res) => {
             });
         }
     };
-    
+
+
+export const cancelOrder = async (req, res) => {
+    try {
+        const headers = await getHeaders(); // Ensure this returns a valid object with Authorization token
+        const orderId = req.params.id; // Get order ID from URL parameters
+
+        if (!orderId) {
+            return res.status(400).json({
+                success: false,
+                message: "Order ID is required for cancellation",
+            });
+        }
+
+        // Prepare the correct API payload
+        const payload = {
+            ids: [orderId], // Shiprocket expects an array
+        };
+
+        // Make API request to cancel the order
+        const response = await axios.post(
+            "https://apiv2.shiprocket.in/v1/external/orders/cancel",
+            payload,
+            headers  // Pass headers correctly
+        );
+
+        // Return successful response
+        res.status(200).json({
+            success: true,
+            data: response.data,
+            message: `Order ${orderId} cancelled successfully`,
+        });
+
+    } catch (err) {
+        console.error("Error cancelling order:", err.message || err);
+
+        if (err.response) {
+            console.error("Error Response Status:", err.response.status);
+            console.error("Error Response Data:", err.response.data);
+        } else if (err.request) {
+            console.error("No Response Received. Request Details:", err.request);
+        } else {
+            console.error("Request Error:", err.message);
+        }
+
+        // Return an error response
+        res.status(500).json({
+            success: false,
+            error: err.response?.data || err.message || "An unknown error occurred",
+            hint: "Ensure the order ID is valid and headers contain correct authorization",
+            troubleshooting: {
+                possibleCauses: [
+                    "Invalid Shiprocket API URL or incorrect endpoint",
+                    "Missing or incorrect headers",
+                    "API request rate limit exceeded",
+                    "Order ID not found"
+                ]
+            }
+        });
+    }
+};
 

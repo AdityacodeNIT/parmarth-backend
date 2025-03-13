@@ -47,11 +47,7 @@ const wishlistedItems = asyncHandler(async (req, res) => {
 
                                 // Add the new item to the wishlist
                                 wishlist.items.push(itemToAdd);
-                        } else {
-                                console.log(
-                                        `Item with productId ${newItem.productId} already exists in the wishlist. Skipping...`,
-                                );
-                        }
+                        } 
                 }
 
                 // Save the updated wishlist after adding new items
@@ -79,25 +75,31 @@ const retrieveWishlisted = asyncHandler(async (req, res) => {
 });
 
 const removeWishlistedItem = asyncHandler(async (req, res) => {
-        const { userId, productId } = req.body;
         try {
-                const wishlist = await Wishlist.findOne({ userId });
-                if (wishlist) {
-                        // Filter out the item to be removed
-                        wishlist.items = wishlist.items.filter(
-                                (item) =>
-                                        item.productId.toString() !== productId,
-                        );
-                        await wishlist.save();
-                        res.status(200).send({
-                                message: "Item removed successfully",
-                        });
-                } else {
-                        res.status(404).send({ message: "Wishlist not found" });
-                }
+            const { productId } = req.body;
+         
+    
+    
+            const objectIdProductId = new mongoose.Types.ObjectId(productId);
+    
+            // Remove the item directly from the database using $pull
+            const result = await Wishlist.findOneAndUpdate(
+                { userId: req.user._id },
+                { $pull: { items: {_id: objectIdProductId } } }, // Remove item
+                { new: true } // Return the updated document
+            );
+    
+            if (!result) {
+                return res.status(404).json({ message: "Wishlist not found" });
+            }
+    
+            res.status(200).json({ message: "Item removed successfully" });
+    
         } catch (error) {
-                res.status(500).send(error);
+            console.error("Error removing item:", error);
+            res.status(500).json({ message: "Internal server error" });
         }
-});
+    });
+    
 
 export { wishlistedItems, retrieveWishlisted, removeWishlistedItem };

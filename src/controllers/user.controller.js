@@ -218,8 +218,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
                         throw new ApiError(401, "Invalid refresh token");
                 }
 
-                console.log(incomingrefreshToken);
-                console.log(user.refreshToken);
+   
 
                 if (incomingrefreshToken !== user.refreshToken) {
                         throw new ApiError(
@@ -323,6 +322,7 @@ const updateAccountdetail = asyncHandler(async (req, res) => {
 });
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
+        
         const avatarLocalPath = req.files?.path;
         if (!avatarLocalPath) {
                 throw new ApiError(400, "Avatar File is missing");

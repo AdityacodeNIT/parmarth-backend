@@ -28,6 +28,8 @@ import Reviewrouter from "./routes/review.routes.js";
 import WishListRouter from "./routes/wishlist.routes.js";
 import adminRouter from "./routes/admin.routes.js";
 import shiprouter from "./routes/shiprocket.routes.js";
+import interactionRouter from "./routes/interaction.routes.js";
+import Subscriberouter from "./routes/subscriber.routes.js";
 
 
 //routes Decleration
@@ -39,6 +41,8 @@ app.use("/api/v2/feedback", Reviewrouter);
 app.use("/api/v2/wishlist", WishListRouter);
 app.use("/api/v2/admin", adminRouter);
 app.use("/shiprocket", shiprouter);
+app.use("/api/activity",interactionRouter);
+app.use("/api/v1", Subscriberouter);
 
 
 app.get("/api/getKey", (req, res) =>

@@ -39,6 +39,7 @@
     "pdf-parse": "^1.1.1",
     "pptxgenjs": "^3.12.0",
     "razorpay": "^2.9.2",
+    "rimraf": "^6.0.1",
     "uuid": "^11.0.5"
   }
 }

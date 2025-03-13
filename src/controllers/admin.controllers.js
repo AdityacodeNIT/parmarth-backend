@@ -1,6 +1,7 @@
 import { User } from "../models/user.model.js";
 import { Product } from "../models/product.models.js";
 import { Order } from "../models/order.models.js";
+import { response } from "express";
 
 const orderlist = async (req, res) => {
         try {
@@ -71,7 +72,7 @@ const userlist = async (req, res) => {
                 ]);
                 res.status(200).json(order);
         } catch (error) {
-                console.log(error);
+                response.status(500).json({ error: error.message });
         }
 };
 
@@ -89,7 +90,7 @@ const productList = async (req, res) => {
                 ]);
                 res.status(200).json(products);
         } catch (error) {
-                console.log(error);
+                throw error;
         }
 };
 
