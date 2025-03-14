@@ -51,6 +51,13 @@ const sellerSchema = new Schema(
                         enum: ["true", "false"],
                         default: "false",
                 },
+
+                approved: {
+                        type:Boolean,
+                        default:false
+                }
+                
+
         },
         { timestamp: true },
 );
