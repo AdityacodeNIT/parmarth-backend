@@ -89,6 +89,7 @@ import Jwt from "jsonwebtoken";
                                         password,
                                         gstNumber,
                                         username: username.toLowerCase(),
+                                        approved: false,
                                 });
                         } catch (error) {
                                 console.error("Error creating user in DB:", error);

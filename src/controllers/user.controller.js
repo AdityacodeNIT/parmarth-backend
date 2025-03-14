@@ -204,60 +204,54 @@ const logOutUser = asyncHandler(async (req, res) => {
 const refreshAccessToken = asyncHandler(async (req, res) => {
         const incomingrefreshToken = req.cookies.refreshToken;
         if (!incomingrefreshToken) {
-                throw new ApiError(401, "Unauthorized Request");
+            throw new ApiError(401, "Unauthorized Request");
         }
-
+    
         try {
-                const decodedToken = Jwt.verify(
-                        incomingrefreshToken,
-                        process.env.REFRESH_TOKEN_SECRET,
-                );
-
-                const user = await User.findById(decodedToken?._id);
-                if (!user) {
-                        throw new ApiError(401, "Invalid refresh token");
-                }
-
-   
-
-                if (incomingrefreshToken !== user.refreshToken) {
-                        throw new ApiError(
-                                401,
-                                "Refresh token is expired or does not match",
-                        );
-                }
-
-                const options = {
-                        httpOnly: true,
-                        secure: true,
-                        sameSite: "None",
-                };
-
-                const { accessToken, refreshToken } =
-                        await generateAccessAndRefreshtoken(user._id);
-
-                return res
-                        .status(200)
-                        .cookie("accessToken", accessToken, options)
-                        .cookie("refreshToken", refreshToken, options)
-                        .json(
-                                new ApiResponse(
-                                        200,
-                                        {
-                                                accessToken,
-                                                refreshToken: refreshToken,
-                                        },
-                                        "Refresh token is created successfully",
-                                ),
-                        );
+            const decodedToken = Jwt.verify(
+                incomingrefreshToken,
+                process.env.REFRESH_TOKEN_SECRET
+            );
+    
+            const user = await User.findById(decodedToken?._id);
+            if (!user) {
+                throw new ApiError(401, "Invalid refresh token");
+            }
+    
+            // 🔴 Check if the refresh token matches the one stored in the database
+            if (incomingrefreshToken !== user.refreshToken) {
+                throw new ApiError(401, "Refresh token is expired or does not match");
+            }
+    
+            // Generate new tokens
+            const { accessToken, refreshToken } = await generateAccessAndRefreshtoken(user._id);
+    
+            // 🔵 Update the stored refresh token
+            user.refreshToken = refreshToken;
+            await user.save();
+    
+            const options = {
+                httpOnly: true,
+                secure: true,
+                sameSite: "None",
+            };
+    
+            return res
+                .status(200)
+                .cookie("accessToken", accessToken, options)
+                .cookie("refreshToken", refreshToken, options)
+                .json(new ApiResponse(200, { accessToken, refreshToken }, "Tokens refreshed successfully"));
         } catch (error) {
-                console.error("Error during token refresh:", error);
-                throw new ApiError(
-                        401,
-                        error.message || "Invalid refresh token",
-                );
+            console.error("Error during token refresh:", error);
+    
+            if (error.name === "TokenExpiredError") {
+                throw new ApiError(401, "Refresh token expired. Please log in again.");
+            }
+    
+            throw new ApiError(401, error.message || "Invalid refresh token");
         }
-});
+    });
+    
 
 const changePassword = asyncHandler(async (req, res) => {
         const { currentPassword, newPassword, confirmPassword } = req.body;

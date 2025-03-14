@@ -20,11 +20,11 @@ const ProductSchema = new Schema(
         },
         stocks: { type: Number, required: true },
 
-        // **Common Stationery Attributes**
-        length: { type: Number }, // In cm
-        breadth: { type: Number }, // In cm
-        height: { type: Number }, // In cm
-        weight: { type: Number }, // In grams
+        // **Physical Attributes**
+        length: { type: Number }, 
+        breadth: { type: Number }, 
+        height: { type: Number }, 
+        weight: { type: Number }, 
 
         // **Tech-Related Attributes**
         memory: { type: String }, // Example: "16GB"
