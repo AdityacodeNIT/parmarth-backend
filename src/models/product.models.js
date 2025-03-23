@@ -36,7 +36,13 @@ const ProductSchema = new Schema(
         // **Writing-Specific Attributes**
         inkColor: { type: String }, // Example: "Blue, Black"
         refillable: { type: Boolean }, // Example: true/false
+    
+    seller:{
+        type:Schema.Types.ObjectId,
+        ref:"user",
+        required:true
     },
+},
     { timestamps: true }
 );
 

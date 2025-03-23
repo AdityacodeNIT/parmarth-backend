@@ -155,15 +155,17 @@ export const getAllOrdersController = async (req, res) => {
     
             // Continue processing orders
             if (!orders.data || !Array.isArray(orders.data)) {
-                console.error('Invalid response format from Shiprocket:', orders);
+              
                 return res.status(500).json({ error: 'Invalid response from Shiprocket API' });
             }
     
-            if (req.user.isAdmin === "false") {
+            if (req.user.role === 'customer') {
+
              
                 const filteredOrders = orders.data.filter(order => {
+                 
               
-                    return order.customer_email === req.user.email;
+                    return order.others.billing_email=== req.user?.email;
                 });
                 orders.data = filteredOrders;
             } else {

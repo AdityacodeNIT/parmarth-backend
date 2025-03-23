@@ -42,11 +42,11 @@ const userSchema = new Schema(
                         type: String,
                         trim:true,
                 },
-                isAdmin: {
+                role: {
                         type: String,
-                        enum: ["true", "false"],
-                        default: "false",
-                },
+                        enum: ["customer", "seller", "admin", "superadmin"],
+                        default: "customer",
+                    },
         },
         { timestamp: true },
 );

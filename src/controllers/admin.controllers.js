@@ -67,6 +67,7 @@ const userlist = async (req, res) => {
                                         username: 1,
                                         fullName: 1,
                                         email: 1,
+                                        role:1,
                                 },
                         },
                 ]);
@@ -94,4 +95,78 @@ const productList = async (req, res) => {
         }
 };
 
-export { orderlist, userlist, productList };
+export const deleteUser = async (req, res) => {
+        try {
+            const userId = req.params.id;
+    
+            // Find the user first
+            const userToDelete = await User.findById(userId);
+    
+            if (!userToDelete) {
+                return res.status(404).json({ message: "User not found" });
+            }
+    
+            // Prevent deletion if the user is a superadmin
+            if (userToDelete.role === "superadmin") {
+                return res.status(403).json({ message: "Cannot delete a superadmin" });
+            }
+    
+            // Delete the user
+            const deletedUser = await User.findByIdAndDelete(userId);
+    
+            res.status(200).json({ message: "User deleted successfully", deletedUser });
+    
+        } catch (error) {
+            console.error("Error deleting user:", error);
+            res.status(500).json({ message: "Internal server error" });
+        }
+    };
+    
+    export const updateUserRole = async (req, res) => {
+        try {
+                const userId=req.params.id;
+                const newRole=req.body.role;
+     
+    
+            if (!["customer", "seller", "admin", "superadmin"].includes(newRole)) {
+                return res.status(400).json({ error: "Invalid role" });
+            }
+    
+            const user = await User.findByIdAndUpdate(userId, { role: newRole }, { new: true });
+    
+            if (!user) return res.status(404).json({ error: "User not found" });
+    
+            res.json({ message: `User promoted to ${newRole}`, user });
+        } catch (error) {
+            res.status(500).json({ error: "Role update failed" });
+        }
+    };
+
+    export const manageOrders = async (req, res) => {
+        try {
+            const orders = await Order.find();
+            res.json(orders);
+        } catch (error) {
+            res.status(500).json({ error: "Server error" });
+        }
+    };
+
+
+    export const getProducts = async (req, res) => {
+        try {
+            let filter = req.user.role === "seller" ? { seller: req.user._id } : {}; 
+            const products = await Product.find(filter);
+            res.json(products);
+        } catch (error) {
+            res.status(500).json({ error: "Error fetching products" });
+        }
+    };
+    
+
+    
+
+
+    
+    
+
+export { orderlist, userlist, productList};

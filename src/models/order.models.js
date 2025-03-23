@@ -14,6 +14,11 @@ const orderSchema = new Schema(
                                         required: true,
                                         ref: "Product",
                                 },
+                                sellerId: {
+                                        type: Schema.Types.ObjectId,
+                                        ref: "User",
+                                    },
+
                                 quantity: { type: Number },
                         },
                 ],

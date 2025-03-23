@@ -42,6 +42,7 @@ const addProduct = asyncHandler(async (req, res) => {
         Category,
         ProductImage: uploadedImage.url,
         stocks,
+        seller: req.user._id,
     };
 
     // Assign only the optional fields that exist in the request
@@ -175,6 +176,73 @@ const getTrendingProduct=asyncHandler(async(req,res)=>{
         }
 })
 
+const updateProduct = asyncHandler(async (req, res) => {
+        try {
+            if (req.user.role !== "seller" && req.user.role !== "superadmin") {
+                return res.status(403).json({ error: "Permission denied" });
+            }
+    
+            const { id } = req.params;
+    
+            // Ensure a seller can only update their own product
+            const filter = req.user.role === "seller" ? { _id: id, seller: req.user._id } : { _id: id };
+    
+            const product = await Product.findOneAndUpdate(filter, req.body, { new: true });
+    
+            if (!product) {
+                return res.status(404).json({ message: "Product not found or unauthorized" });
+            }
+    
+            res.json(product);
+        } catch (error) {
+            res.status(500).json({ error: "Error updating product" });
+        }
+    });
+    
+
+    const deleteProduct = asyncHandler(async (req, res) => {
+        try {
+            // Only allow sellers to delete their own products or admins to delete any product
+            if (req.user.role !== "seller" && req.user.role !== "superadmin") {
+                return res.status(403).json({ error: "Permission denied" });
+            }
+    
+            const { id } = req.params;
+            
+            // If the user is a seller, ensure they own the product
+            const filter = req.user.role === "seller" ? { _id: id, seller: req.user._id } : { _id: id };
+    
+            const product = await Product.findOneAndDelete(filter);
+    
+            if (!product) {
+                return res.status(404).json({ message: "Product not found or unauthorized" });
+            }
+    
+            res.json({ message: "Product deleted successfully" });
+        } catch (error) {
+            res.status(500).json({ error: "Error deleting product" });
+        }
+    });
+
+    const getSellerProduct = asyncHandler(async (req, res) => {
+        if (req.user.role !== "seller" && req.user.role !== "superadmin") {
+                return res.status(403).json({ error: "Permission denied" });
+
+            }
+            const filter = req.user.role === "seller" ? { seller:req.user._id} : {};
+    
+
+        const product = await Product.find(filter);
+
+        if (!product) {
+                throw new ApiError(404, "Product does not found ");
+        } else {
+                res.json(product);
+        }
+});
+    
+
+
 export {
         getTrendingProduct,
         addProduct,
@@ -185,4 +253,7 @@ export {
         ReusableProduct,
         getProduct,
         searchresult,
+        deleteProduct,
+        updateProduct,
+        getSellerProduct,
 };
