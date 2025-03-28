@@ -62,17 +62,18 @@ const registerUser = asyncHandler(async (req, res) => {
                 coverImageLocalPath = req.files.coverImage[0]?.path;
         }
 
-        if (!avatarlocalPath) {
-                throw new ApiError(400, "Avatar file is required");
-        }
+       
 
         let avatar;
+        if(avatarlocalPath){
+
         try {
                 avatar = await uploadOnCloudinary(avatarlocalPath);
         } catch (error) {
                 console.error("Error uploading avatar:", error);
                 throw new ApiError(500, "Error uploading avatar");
         }
+}
 
         let coverImage;
         if (coverImageLocalPath) {
@@ -90,7 +91,7 @@ const registerUser = asyncHandler(async (req, res) => {
         try {
                 user = await User.create({
                         fullName,
-                        avatar: avatar.url,
+                        avatar: avatar?.url||"",
                         coverImage: coverImage?.url || "",
                         email,
                         password,
@@ -202,55 +203,55 @@ const logOutUser = asyncHandler(async (req, res) => {
 });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
-        const incomingrefreshToken = req.cookies.refreshToken;
-        if (!incomingrefreshToken) {
-            throw new ApiError(401, "Unauthorized Request");
+        const incomingRefreshToken = req.cookies.refreshToken;
+    
+        if (!incomingRefreshToken) {
+            throw new ApiError(401, "Unauthorized request. Refresh token missing.");
         }
     
         try {
-            const decodedToken = Jwt.verify(
-                incomingrefreshToken,
-                process.env.REFRESH_TOKEN_SECRET
-            );
+            const decodedToken = Jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
     
             const user = await User.findById(decodedToken?._id);
             if (!user) {
                 throw new ApiError(401, "Invalid refresh token");
             }
     
-            // 🔴 Check if the refresh token matches the one stored in the database
-            if (incomingrefreshToken !== user.refreshToken) {
-                throw new ApiError(401, "Refresh token is expired or does not match");
+            // 🔴 Keep the old refresh token valid for a short time
+            if (incomingRefreshToken !== user.refreshToken) {
+                throw new ApiError(401, "Refresh token mismatch. Please log in again.");
             }
     
             // Generate new tokens
-            const { accessToken, refreshToken } = await generateAccessAndRefreshtoken(user._id);
+            const { accessToken, refreshToken: newRefreshToken } = await generateAccessAndRefreshtoken(user._id);
     
-            // 🔵 Update the stored refresh token
-            user.refreshToken = refreshToken;
+            // 🔵 Store the new refresh token **only if generation is successful**
+            user.refreshToken = newRefreshToken;
             await user.save();
     
             const options = {
                 httpOnly: true,
-                secure: true,
-                sameSite: "None",
+                secure: process.env.NODE_ENV === "production",
+                sameSite: "Strict",
             };
     
             return res
                 .status(200)
-                .cookie("accessToken", accessToken, options)
-                .cookie("refreshToken", refreshToken, options)
-                .json(new ApiResponse(200, { accessToken, refreshToken }, "Tokens refreshed successfully"));
+                .cookie("accessToken", accessToken, { ...options, maxAge: 15 * 60 * 1000 }) // 15 min
+                .cookie("refreshToken", newRefreshToken, { ...options, maxAge: 7 * 24 * 60 * 60 * 1000 }) // 7 days
+                .json(new ApiResponse(200, { accessToken }, "Tokens refreshed successfully"));
         } catch (error) {
             console.error("Error during token refresh:", error);
     
             if (error.name === "TokenExpiredError") {
+                res.clearCookie("refreshToken");
                 throw new ApiError(401, "Refresh token expired. Please log in again.");
             }
     
-            throw new ApiError(401, error.message || "Invalid refresh token");
+            throw new ApiError(401, "Invalid refresh token");
         }
     });
+    
     
 
 const changePassword = asyncHandler(async (req, res) => {

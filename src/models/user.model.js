@@ -32,7 +32,7 @@ const userSchema = new Schema(
                 },
                 avatar: {
                         type: String,
-                        required: true, // Cloudnary
+                        
                 },
                 password: {
                         type: String,
