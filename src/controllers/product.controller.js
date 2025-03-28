@@ -176,25 +176,56 @@ const getTrendingProduct=asyncHandler(async(req,res)=>{
         }
 })
 
+
 const updateProduct = asyncHandler(async (req, res) => {
         try {
             if (req.user.role !== "seller" && req.user.role !== "superadmin") {
                 return res.status(403).json({ error: "Permission denied" });
             }
-    
             const { id } = req.params;
     
-            // Ensure a seller can only update their own product
+            // Ensure sellers update only their own products
             const filter = req.user.role === "seller" ? { _id: id, seller: req.user._id } : { _id: id };
-    
-            const product = await Product.findOneAndUpdate(filter, req.body, { new: true });
-    
-            if (!product) {
+            
+            // Find the existing product
+            const existingProduct = await Product.findOne(filter);
+            if (!existingProduct) {
                 return res.status(404).json({ message: "Product not found or unauthorized" });
             }
     
-            res.json(product);
+            // Prepare update data
+            const updateData = {
+                name: req.body.name || existingProduct.name,
+                description: req.body.description || existingProduct.description,
+                price: req.body.price || existingProduct.price,
+                category: req.body.category || existingProduct.category
+            };
+
+            const avatarlocalPath = req.file?.path;
+
+        
+
+            
+                    let uploadedAvatar;
+                    try {
+                        uploadedAvatar = await uploadOnCloudinary(avatarlocalPath);
+                } catch (error) {
+                        console.error("Error uploading avatar:", error);
+                        throw new ApiError(500, "Error uploading avatar");
+                }
+
+            if (uploadedAvatar) {
+                updateData.ProductImage = uploadedAvatar.url;
+            } else {
+                updateData.ProductImage = existingProduct.ProductImage; // Keep old image if not provided
+            }
+    
+            // Update product while keeping old values for fields not sent in req.body
+            const updatedProduct = await Product.findByIdAndUpdate(id, updateData, { new: true });
+    
+            res.json(updatedProduct);
         } catch (error) {
+            console.error(error);
             res.status(500).json({ error: "Error updating product" });
         }
     });

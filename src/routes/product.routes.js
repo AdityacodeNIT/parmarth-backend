@@ -30,7 +30,7 @@ router.route("/addProduct").post(
 router.route("/updateProduct/:id").post(
         verifyJWT,
         verifyRole(["seller", "superadmin"]),
-        upload.single("ProductImage"),
+        upload.single("productImage"),
         updateProduct,
 );
 
