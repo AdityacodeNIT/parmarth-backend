@@ -48,7 +48,7 @@ router.route("/changePassword").post(verifyJWT, changePassword);
 
 
 
-router.route("/refresh-token").post(verifyJWT, refreshAccessToken);
+router.route("/refresh-token").post(refreshAccessToken);
 
 router.put("/updateRole", verifyRole, verifyRole("superadmin"), updateUserRole);
 

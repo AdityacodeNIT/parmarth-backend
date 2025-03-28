@@ -1,22 +1,31 @@
 import mongoose, { Schema } from "mongoose";
 
 const reviewSchema = new Schema(
-        {
-                rating: {
-                        type: Number,
-                        required: true,
-                },
-                productId: {
-                        type: mongoose.Schema.Types.ObjectId,
-                        required: true,
-                        ref: "Product",
-                },
-
-                message: {
-                        type: String,
-                },
+    {
+        userId: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: true,
+            ref: "User",
         },
-        { timestamps: true },
+        productId: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: true,
+            ref: "Product",
+        },
+        rating: {
+            type: Number,
+            required: true,
+        },
+        message: {
+            type: String,
+            default: " ",
+            required: true,
+        },
+    },
+    { timestamps: true }
 );
 
-export const Review = mongoose.model("reviewSchema", reviewSchema);
+// 🔴 Ensure a user can review a product only once
+reviewSchema.index({ userId: 1, productId: 1 }, { unique: true });
+
+export const Review = mongoose.model("Review", reviewSchema);

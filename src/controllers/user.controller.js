@@ -8,22 +8,25 @@ import Jwt from "jsonwebtoken";
 /*this is the function for generating access tokenwhere we can use these
                 token by exporting them from dataset because they are quite common*/
 
-const generateAccessAndRefreshtoken = async (userId) => {
-        try {
-                const user = await User.findById(userId);
-                const accessToken = user.generateAccessToken();
-                const refreshToken = user.generateRefreshToken();
-
-                user.refreshToken = refreshToken;
-                await user.save({ validateBeforeSave: false });
-                return { accessToken, refreshToken };
-        } catch (error) {
-                throw new ApiError(
-                        500,
-                        "Something went wrong while generating referesh and access token",
-                );
-        }
-};
+                const generateAccessAndRefreshToken = async (userId) => {
+                        try {
+                          const user = await User.findById(userId);
+                          if (!user) throw new ApiError(404, "User not found");
+                      
+                          const accessToken = user.generateAccessToken();
+                          const refreshToken = user.generateRefreshToken();
+                      
+                          // Store new refresh token
+                          user.refreshToken = refreshToken;
+                          await user.save({ validateBeforeSave: false });
+                      
+                          return { accessToken, refreshToken };
+                        } catch (error) {
+                          console.error("Error generating tokens:", error);
+                          throw new ApiError(500, "Error generating tokens");
+                        }
+                      };
+                      
 
 /***** starting here ****/
 const registerUser = asyncHandler(async (req, res) => {
@@ -146,13 +149,13 @@ const loginUser = asyncHandler(async (req, res) => {
         }
 
         const { accessToken, refreshToken } =
-                await generateAccessAndRefreshtoken(user._id);
+                await generateAccessAndRefreshToken(user._id);
 
         const loggedInUser = await User.findById(user._id).select("-password ");
 
         const options = {
                 httpOnly: true,
-                secure: true,
+                secure: process.env.NODE_VAR=="production",
                 sameSite: "None",
         };
 
@@ -190,7 +193,7 @@ const logOutUser = asyncHandler(async (req, res) => {
 
         const options = {
                 httpOnly: true,
-                secure: true,
+                secure: process.env.NODE_VAR=="production",
                 sameSite: "None",
         };
 
@@ -217,14 +220,17 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
             if (!user) {
                 throw new ApiError(401, "Invalid refresh token");
             }
+
+            console.log(user.refreshToken);
+            console.log(incomingrefreshToken);
     
-            // 🔴 Check if the refresh token matches the one stored in the database
+        
             if (incomingrefreshToken !== user.refreshToken) {
                 throw new ApiError(401, "Refresh token is expired or does not match");
             }
     
             // Generate new tokens
-            const { accessToken, refreshToken } = await generateAccessAndRefreshtoken(user._id);
+            const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
     
             // 🔵 Update the stored refresh token
             user.refreshToken = refreshToken;
@@ -232,7 +238,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     
             const options = {
                 httpOnly: true,
-                secure: true,
+                secure: process.env.NODE_VAR=="production",
                 sameSite: "None",
             };
     

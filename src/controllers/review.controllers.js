@@ -4,15 +4,29 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { Review } from "../models/review.models.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
-// Function to add a review
-const review = asyncHandler(async (req, res) => {
-        const { rating, productId, message } = req.body;
-        // Add new review
-        const reviews = await Review.create({ rating, productId, message });
+const review = async (req, res) => {
+    try {
+        const { productId, rating, message } = req.body;
+        const userId = req.user._id; // Assuming user is authenticated
 
-        // Return the created review and the total count of reviews
-        return res.status(201).json(new ApiResponse(200, reviews));
-});
+        // 🔴 Check if the user already reviewed this product
+        const existingReview = await Review.findOne({ userId, productId });
+
+        if (existingReview) {
+            return res.status(400).json({ message: "You have already reviewed this product" });
+        }
+
+        // ✅ Create new review
+        const newReview = new Review({ userId, productId, rating, message });
+        await newReview.save();
+
+        res.status(201).json({ message: "Review added successfully", review: newReview });
+    } catch (error) {
+        console.error("Error adding review:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
 
 const averageReview = asyncHandler(async (req, res) => {
         const { productId } = req.body;
@@ -37,4 +51,15 @@ const averageReview = asyncHandler(async (req, res) => {
         return res.json({ averageRating, count });
 });
 
-export { review, averageReview };
+const getReview=asyncHandler(async(req,res)=>{
+        const review=await Review.find();
+
+        if (!review) {
+                throw new ApiError(404, "Product does not found ");
+        } else {
+                res.json(review);
+        }
+
+})
+
+export { review, averageReview,getReview };
