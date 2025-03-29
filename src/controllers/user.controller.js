@@ -155,7 +155,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
         const options = {
                 httpOnly: true,
-                secure: process.env.NODE_VAR=="production",
+                secure: true,
                 sameSite: "None",
         };
 
@@ -193,7 +193,9 @@ const logOutUser = asyncHandler(async (req, res) => {
 
         const options = {
                 httpOnly: true,
-                secure: process.env.NODE_VAR=="production",
+                secure: true,
+
+              //  secure: process.env.NODE_VAR=="production",
                 sameSite: "None",
         };
 
@@ -221,8 +223,6 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
                 throw new ApiError(401, "Invalid refresh token");
             }
 
-            console.log(user.refreshToken);
-            console.log(incomingrefreshToken);
     
         
             if (incomingrefreshToken !== user.refreshToken) {
@@ -238,7 +238,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     
             const options = {
                 httpOnly: true,
-                secure: process.env.NODE_VAR=="production",
+                secure: true,
+                // secure: process.env.NODE_VAR=="production",
                 sameSite: "None",
             };
     

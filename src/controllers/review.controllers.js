@@ -7,7 +7,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 const review = async (req, res) => {
     try {
         const { productId, rating, message } = req.body;
-        const userId = req.user._id; // Assuming user is authenticated
+        const userId = req.user.id; // Assuming user is authenticated
 
         // 🔴 Check if the user already reviewed this product
         const existingReview = await Review.findOne({ userId, productId });
@@ -17,10 +17,9 @@ const review = async (req, res) => {
         }
 
         // ✅ Create new review
-        const newReview = new Review({ userId, productId, rating, message });
-        await newReview.save();
+        const newReview = await  Review.create({ userId, productId, rating, message });
 
-        res.status(201).json({ message: "Review added successfully", review: newReview });
+        return res.status(201).json(new ApiResponse(200, newReview));
     } catch (error) {
         console.error("Error adding review:", error);
         res.status(500).json({ message: "Internal server error" });
@@ -51,15 +50,22 @@ const averageReview = asyncHandler(async (req, res) => {
         return res.json({ averageRating, count });
 });
 
-const getReview=asyncHandler(async(req,res)=>{
-        const review=await Review.find();
+const getReview = asyncHandler(async (req, res) => {
 
-        if (!review) {
-                throw new ApiError(404, "Product does not found ");
-        } else {
-                res.json(review);
-        }
+        console.log("getReview called");
+        console.log(req.params.id);
 
-})
+        const id  = req.params.id;
+        const reviews = await Review.find({productId:id}).populate("userId", "fullName"); // Populate userId with name and email fields
+        console.log("review",reviews)
+
+    
+        if (reviews.length === 0) {
+            throw new ApiError(404, "No reviews found");
+        } 
+    
+        res.json(reviews);
+    });
+    
 
 export { review, averageReview,getReview };
