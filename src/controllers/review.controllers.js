@@ -52,12 +52,11 @@ const averageReview = asyncHandler(async (req, res) => {
 
 const getReview = asyncHandler(async (req, res) => {
 
-        console.log("getReview called");
-        console.log(req.params.id);
+      
 
         const id  = req.params.id;
         const reviews = await Review.find({productId:id}).populate("userId", "fullName"); // Populate userId with name and email fields
-        console.log("review",reviews)
+      
 
     
         if (reviews.length === 0) {

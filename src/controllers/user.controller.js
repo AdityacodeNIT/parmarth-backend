@@ -4,6 +4,7 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import Jwt from "jsonwebtoken";
+import redis from "../utils/redisClients.js";
 
 /*this is the function for generating access tokenwhere we can use these
                 token by exporting them from dataset because they are quite common*/
@@ -159,6 +160,8 @@ const loginUser = asyncHandler(async (req, res) => {
                 sameSite: "None",
         };
 
+
+
         return res
 
                 .status(200)
@@ -170,41 +173,51 @@ const loginUser = asyncHandler(async (req, res) => {
                                 200,
                                 {
                                         user: loggedInUser,
-                                        accessToken,
-                                        refreshToken,
                                 },
                                 "User logged In Successfully",
                         ),
                 );
 });
 
+
 const logOutUser = asyncHandler(async (req, res) => {
+        const accessToken = req.cookies?.accessToken;
+        const refreshToken = req.cookies?.refreshToken;
+    
+        // If user is not authenticated
         if (!req.user) {
-                return res
-                        .status(401)
-                        .json(new ApiResponse(401, {}, "Unauthorized"));
+            return res.status(401).json(new ApiResponse(401, {}, "Unauthorized"));
         }
-
+    
+        // Blacklist accessToken in Redis (if present)
+        if (accessToken) {
+            const decoded = Jwt.decode(accessToken);
+            if (decoded?.exp) {
+                const expiresIn = decoded.exp - Math.floor(Date.now() / 1000);
+                await redis.set(`bl_${accessToken}`, "1", "EX", expiresIn);
+            }
+        }
+    
+        // Remove refreshToken from DB
         await User.findByIdAndUpdate(
-                req.user?._id,
-                { $unset: { refreshToken: 1 } },
-                { new: true },
+            req.user._id,
+            { $unset: { refreshToken: 1 } },
+            { new: true }
         );
-
-        const options = {
-                httpOnly: true,
-                secure: true,
-
-              //  secure: process.env.NODE_VAR=="production",
-                sameSite: "None",
+    
+        // Clear cookies
+        const cookieOptions = {
+            httpOnly: true,
+            secure: true,
+            sameSite: "None",
         };
-
-        return res
-                .status(200)
-                .clearCookie("accessToken", options)
-                .clearCookie("refreshToken", options)
-                .json(new ApiResponse(200, {}, "User Logged Out"));
-});
+    
+        res
+            .clearCookie("accessToken", cookieOptions)
+            .clearCookie("refreshToken", cookieOptions)
+            .status(200)
+            .json(new ApiResponse(200, {}, "User Logged Out Successfully"));
+    });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
         const incomingrefreshToken = req.cookies.refreshToken;
@@ -283,6 +296,8 @@ const changePassword = asyncHandler(async (req, res) => {
                 .json(new ApiResponse(200, {}, "password changed succesfully"));
 });
 
+
+
 const getCurrentUser = asyncHandler(async (req, res) => {
         return res
                 .status(200)
@@ -296,8 +311,27 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 });
 
 const updateAccountdetail = asyncHandler(async (req, res) => {
-        const { fullName, email } = req.body;
+        const { fullName, email,password } = req.body;
 
+         // Retrieve the user from the database
+    const user = await User.findById(req.user?._id);
+    if (!user) {
+        return res.status(404).json(
+            new ApiResponse(404, null, "User not found")
+        );
+    }
+
+    // Verify if the provided password is correct
+    const isPasswordCorrect = await user.isPasswordCorrect(password);
+    if (!isPasswordCorrect) {
+        // Return an API response with a custom message for incorrect password
+        return res.status(401).json(
+            new ApiResponse(401, null, "Password is not correct")
+        );
+    }
+
+
+      
         if (!(fullName || email)) {
                 throw new ApiError(400, "All feilds are required");
         }
@@ -311,12 +345,14 @@ const updateAccountdetail = asyncHandler(async (req, res) => {
                 },
                 { new: true },
         ).select("-password");
+        
         return res
                 .status(200)
                 .json(
                         new ApiResponse(
                                 200,
-                                updateuser,
+                               { user:updateuser},
+                                true,
                                 "Account details updated succesfully",
                         ),
                 );

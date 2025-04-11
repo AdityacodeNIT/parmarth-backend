@@ -59,7 +59,7 @@ export const createOrderController = async (req, res) => {
                     order_id: uuidv4(),
                     order_date: new Date().toISOString(),
 
-                    billing_customer_name: address.firstName,
+                    billing_customer_name: req.user?.username,
                     billing_last_name: address.lastName,
                     billing_address: address.streetAddress,
                     billing_city: address.city,
@@ -165,7 +165,7 @@ export const getAllOrdersController = async (req, res) => {
                 const filteredOrders = orders.data.filter(order => {
                  
               
-                    return order.others.billing_email=== req.user?.email;
+                    return order.others.username=== req.user?.username;
                 });
                 orders.data = filteredOrders;
             } else {
