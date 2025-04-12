@@ -158,15 +158,20 @@ export const getAllOrdersController = async (req, res) => {
               
                 return res.status(500).json({ error: 'Invalid response from Shiprocket API' });
             }
+
+            console.log("Fetched orders:", orders);
     
             if (req.user.role === 'customer') {
+
+              
 
              
                 const filteredOrders = orders.data.filter(order => {
                  
               
-                    return order.others.username=== req.user?.username;
+                    return order.customer_email=== req.user?.email;
                 });
+                console.log("Filtered orders for customer:", filteredOrders);
                 orders.data = filteredOrders;
             } else {
                 console.log("Admin user detected. Returning all orders...");
