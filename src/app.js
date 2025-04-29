@@ -37,6 +37,7 @@ import sellerRouter from "./routes/seller.routes.js";
 //routes Decleration
 
 app.use("/api/v1/users", userRouter);
+
 app.use("/api/v1/seller", sellerRouter);
 app.use("/api/v1/product", productRouter);
 app.use("/api/v1/address", addressRouter);
@@ -49,7 +50,15 @@ app.use("/api/v1", Subscriberouter);
 
 
 
+
 app.get("/api/getKey", (req, res) =>
         res.status(200).json({ key: process.env.RAZORPAY_API_KEY }),
 );
+
+// Routes declaratio
+app.get('/active', (req, res) => {
+        res.status(200).send('Server is active');
+      });
+
+
 export { app };

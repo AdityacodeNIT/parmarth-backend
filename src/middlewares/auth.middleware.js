@@ -5,7 +5,6 @@ import { User } from "../models/user.model.js";
 import { Seller } from "../models/seller.model.js";
 import redis from "../utils/redisClients.js";
 
-// ✅ Middleware to verify JWT for normal users
 export const verifyJWT = asyncHandler(async (req, res, next) => {
     try {
         const token = req.cookies?.accessToken;
@@ -13,7 +12,6 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
         if (!token) {
             throw new ApiError(401, "Access token is missing. Please log in.");
         }
-    // 🔒 Check if token is blacklisted in Redis
     
         const isBlacklisted = await redis.get(`bl_${token}`);
         if (isBlacklisted) {
@@ -35,7 +33,6 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
     }
 });
 
-// ✅ Middleware to verify JWT for sellers
 export const verifySeller = asyncHandler(async (req, res, next) => {
     try {
         const token = req.cookies?.accessToken;
@@ -44,7 +41,6 @@ export const verifySeller = asyncHandler(async (req, res, next) => {
             throw new ApiError(401, "Token is not present");
         }
 
-        // 🔒 Check blacklist
         const isBlacklisted = await redis.get(`bl_${token}`);
         if (isBlacklisted) {
             throw new ApiError(401, "Token is blacklisted");
@@ -65,7 +61,6 @@ export const verifySeller = asyncHandler(async (req, res, next) => {
     }
 });
 
-// ✅ Prevent already logged-in users from accessing login/register
 export const isAuthenticated = asyncHandler(async (req, res, next) => {
     try {
         const token = req.cookies?.accessToken;
@@ -88,7 +83,6 @@ export const isAuthenticated = asyncHandler(async (req, res, next) => {
     }
 });
 
-// ✅ Prevent already logged-in sellers from accessing login/register
 export const isSellerAutenticated = asyncHandler(async (req, res, next) => {
     try {
         const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "").trim();

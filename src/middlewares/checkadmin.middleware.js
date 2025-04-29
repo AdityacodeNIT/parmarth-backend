@@ -13,7 +13,5 @@ export const checkadmin = (req, res, next) => {
                         .status(403)
                         .json({ message: "Forbidden: Admins only." });
         }
- // Log for debugging admin access
-
         next();
 };

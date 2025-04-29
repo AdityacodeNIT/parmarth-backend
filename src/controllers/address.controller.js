@@ -70,8 +70,10 @@ const getAddress = asyncHandler(async (req, res) => {
                         .json(
                                 new ApiResponse(
                                         200,
-                                        "No address found for this user",
                                         null,
+                                        true,
+                                        "No address found for this user",
+                                     
                                 ),
                         );
         }
@@ -87,5 +89,37 @@ const getAddress = asyncHandler(async (req, res) => {
                 );
 });
 
-export { addAddress, getAddress };
+const getAllAddresses=asyncHandler(async(req,res)=>{
+        const alladresses=await Address.find({userId:req.user._id});
+        if(!alladresses){
+                return res.
+                status(200).json(
+                        new ApiResponse(
+                                200,
+                                null,
+                                false,
+                                "No address found for this user",
+                             
+                        ), 
+                )
+                
+        }
+
+        return res.
+        status(200).json(
+                new ApiResponse(
+                        200,
+                        alladresses,
+                        true,
+                        "Addresses retrieved successfully",
+
+                ), 
+        )
+
+
+
+
+})
+
+export { addAddress, getAddress,getAllAddresses };
 
