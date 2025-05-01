@@ -6,16 +6,16 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import Jwt from "jsonwebtoken";
 
 
-export const getRecommendations = async (req, res) => {
-  try {
+export const getRecommendations = asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
     const interactions = await UserInteraction.find({ userId });
     if (!interactions.length) {
-      return res.status(404).json({ message: "No user interactions found" });
+      throw new ApiError(404,  "No user interactions found");
     }
 
-  
+    try{
+
     const response = await axios.get(`http://127.0.0.1:5001/recommend/${userId}`);
     const recommendedProductIds = response.data.recommended_products;
 
@@ -25,6 +25,6 @@ export const getRecommendations = async (req, res) => {
     res.json({ userId, recommendedProducts });
   } catch (error) {
     console.error("Error fetching recommendations:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    throw new ApiError(500, "Internal Server Error");
   }
-};
+});

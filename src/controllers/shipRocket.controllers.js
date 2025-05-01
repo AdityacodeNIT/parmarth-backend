@@ -3,8 +3,8 @@ import { Product } from "../models/product.models.js";
 import { Address } from "../models/address.models.js";
 import axios from "axios";
 import { v4 as uuidv4 } from 'uuid';
-
-// Authenticatication
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../utils/ApiError.js";
 
 
 
@@ -16,16 +16,13 @@ const generateSKU = (name) => {
 };
 
 
-
-
 // Authentication
 authenticate().catch((err) => console.error(err.message));
 
-export const createOrderController = async (req, res) => {
-    try {
+export const createOrderController = asyncHandler(async (req, res) => {
+
         const { items } = req.body;
       
-
         if (!items || items.length === 0) {
             return res.status(400).json({ error: "No items provided" });
         }
@@ -38,7 +35,7 @@ export const createOrderController = async (req, res) => {
             const product = await Product.findById(productId);
 
             if (!product) {
-                return res.status(404).json({ error: `Product with ID ${productId} not found` });
+                throw new ApiError(404, `Product with ID ${productId} not found`);
             }
 
             await Product.updateOne(
@@ -52,7 +49,7 @@ export const createOrderController = async (req, res) => {
                 const address = await Address.findById(Address_id);
 
                 if (!address) {
-                    return res.status(404).json({ error: "Address not found" });
+                    throw new ApiError(404, `Address with ID ${Address_id} not found`);
                 }
 
                 groupedOrders[Address_id] = {
@@ -100,184 +97,125 @@ export const createOrderController = async (req, res) => {
             data: result,
             message: "Order created successfully",
         });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+   
+});
+
+export const getAllOrdersController = asyncHandler(async (req, res) => {
+    if (!req.user) {
+        console.error('User not authenticated');
+        throw new ApiError(401, "User not authenticated");
     }
-};
 
+    const headers = await getHeaders();
+    let orders;
 
-export const getAllOrdersController = async (req, res) => {
-    
-    
-        try {
-            // Ensure req.user is defined
-            if (!req.user) {
-                console.error('User not authenticated');
-                return res.status(401).json({ error: 'User not authenticated' });
-            }
-    
-            const headers = await getHeaders();
-    
-            // Fetch orders from Shiprocket
-         
-    
-            let orders;
-            try {
-                const response = await axios.get(
-                    "https://apiv2.shiprocket.in/v1/external/orders",
-                    headers,
-                );
-                orders = response.data;
-            } catch (shiprocketError) {
-                console.error('Error fetching orders from Shiprocket:', shiprocketError);
-    
-                // Check if Shiprocket provided a response
-                if (shiprocketError.response) {
-                    // Shiprocket responded with an error status code
-                    const statusCode = shiprocketError.response.status || 502; // Use 502 Bad Gateway if status code is not provided
-                    const shiprocketMessage = shiprocketError.response.data.message || 'Error from Shiprocket API';
-    
-                    return res.status(statusCode).json({
-                        error: `Shiprocket API error: ${shiprocketMessage}`,
-                    });
-                } else if (shiprocketError.request) {
-                    // No response received from Shiprocket
-                    return res.status(504).json({
-                        error: 'No response from Shiprocket API (Gateway Timeout)',
-                    });
-                } else {
-                    // Other errors
-                    return res.status(500).json({
-                        error: `Error while communicating with Shiprocket API: ${shiprocketError.message}`,
-                    });
-                }
-            }
-    
-            // Continue processing orders
-            if (!orders.data || !Array.isArray(orders.data)) {
-              
-                return res.status(500).json({ error: 'Invalid response from Shiprocket API' });
-            }
-
-            console.log("Fetched orders:", orders);
-    
-            if (req.user.role === 'customer') {
-
-              
-
-             
-                const filteredOrders = orders.data.filter(order => {
-                 
-              
-                    return order.customer_email=== req.user?.email;
-                });
-                console.log("Filtered orders for customer:", filteredOrders);
-                orders.data = filteredOrders;
-            } else {
-                console.log("Admin user detected. Returning all orders...");
-            }
-    
-            res.status(200).json({
-                data: orders,
-                message: "Orders fetched successfully",
-            });
-        } catch (err) {
-            // Handle any other errors that may occur
-            console.error('Error in getAllOrdersController:', err);
-            res.status(500).json({
-                success: false,
-                error: err.response?.data || err.message || "An unknown error occurred",
-                hint: "Ensure the order ID is valid and headers contain correct authorization",
-                troubleshooting: {
-                    possibleCauses: [
-                        "Invalid Shiprocket API URL or incorrect endpoint",
-                        "Missing or incorrect headers",
-                        "API request rate limit exceeded",
-                        "Order ID not found"
-                    ]
-                }
-            });
-        }
-    };
-export const getOrder = async (req, res) => {
-      
-    
-        try {
-            const headers = await getHeaders();
-            const id = req.params.id;
-    
-          
-    
-            // Make the API request to Shiprocket
-            const response = await axios.get(
-                `https://apiv2.shiprocket.in/v1/external/orders/show/${id}`,
-                headers
-            );
-    
-    
-            // Return successful response
-            res.status(200).json({
-                success: true,
-                data: response.data,
-                message: `Order ${id} fetched successfully`
-            });
-    
-        } catch (err) {
-            // Log different error types for better debugging
-            console.error("Error fetching orders:", err.message || err);
-    
-            if (err.response) {
-                console.error("Error Response Status:", err.response.status);
-                console.error("Error Response Data:", err.response.data);
-            } else if (err.request) {
-                console.error("No Response Received. Request Details:", err.request);
-            } else {
-                console.error("Request Error:", err.message);
-            }
-    
-            // Return a descriptive error response
-            res.status(500).json({
-                success: false,
-                error: err.response?.data || err.message || "An unknown error occurred",
-                hint: "Ensure the order ID is valid and headers contain correct authorization",
-                troubleshooting: {
-                    possibleCauses: [
-                        "Invalid Shiprocket API URL or incorrect endpoint",
-                        "Missing or incorrect headers",
-                        "API request rate limit exceeded",
-                        "Order ID not found"
-                    ]
-                }
-            });
-        }
-    };
-
-
-export const cancelOrder = async (req, res) => {
     try {
-        const headers = await getHeaders(); // Ensure this returns a valid object with Authorization token
-        const orderId = req.params.id; // Get order ID from URL parameters
+        const response = await axios.get(
+            "https://apiv2.shiprocket.in/v1/external/orders",
+            headers,
+        );
+        orders = response.data;
+    } catch (shiprocketError) {
+        console.error('Error fetching orders from Shiprocket:', shiprocketError);
 
-        if (!orderId) {
-            return res.status(400).json({
+        if (shiprocketError.response) {
+            const statusCode = shiprocketError.response.status || 502;
+            const shiprocketMessage = shiprocketError.response.data.message || 'Error from Shiprocket API';
+
+            return res.status(statusCode).json({
                 success: false,
-                message: "Order ID is required for cancellation",
+                error: `Shiprocket API error: ${shiprocketMessage}`,
+            });
+        } else if (shiprocketError.request) {
+            return res.status(504).json({
+                success: false,
+                error: 'No response from Shiprocket API (Gateway Timeout)',
+            });
+        } else {
+            return res.status(500).json({
+                success: false,
+                error: `Error communicating with Shiprocket API: ${shiprocketError.message}`,
             });
         }
+    }
 
-        // Prepare the correct API payload
-        const payload = {
-            ids: [orderId], // Shiprocket expects an array
-        };
+    if (!orders.data || !Array.isArray(orders.data)) {
+        return res.status(500).json({
+            success: false,
+            error: 'Invalid response from Shiprocket API',
+        });
+    }
 
-        // Make API request to cancel the order
+    console.log("Fetched orders:", orders);
+
+    // Role-based filtering
+    if (req.user.role === 'customer') {
+        const filteredOrders = orders.data.filter(order => {
+            return order.customer_email === req.user?.email;
+        });
+        console.log("Filtered orders for customer:", filteredOrders);
+        orders.data = filteredOrders;
+    } else {
+        console.log("Admin user detected. Returning all orders...");
+    }
+
+    return res.status(200).json({
+        success: true,
+        data: orders,
+        message: "Orders fetched successfully",
+    });
+});
+
+export const getOrder = asyncHandler(async (req, res) => {
+    const headers = await getHeaders();
+    const id = req.params.id;
+
+    try {
+        const response = await axios.get(
+            `https://apiv2.shiprocket.in/v1/external/orders/show/${id}`,
+            headers
+        );
+
+        res.status(200).json({
+            success: true,
+            data: response.data,
+            message: `Order ${id} fetched successfully`
+        });
+
+    } catch (err) {
+        console.error("Error fetching order:", err.message || err);
+
+        if (err.response) {
+            const statusCode = err.response.status || 502;
+            const message = err.response.data?.message || "Shiprocket API responded with an error";
+            throw new ApiError(statusCode, message);
+        } else if (err.request) {
+            throw new ApiError(504, "No response from Shiprocket API (Gateway Timeout)");
+        } else {
+            throw new ApiError(500, `Shiprocket communication error: ${err.message}`);
+        }
+    }
+});
+
+export const cancelOrder = asyncHandler(async (req, res) => {
+    const headers = await getHeaders(); // Must return valid Authorization headers
+    const orderId = req.params.id;
+
+    if (!orderId) {
+        throw new ApiError(400, "Order ID is required for cancellation");
+    }
+
+    const payload = {
+        ids: [orderId], // Shiprocket expects an array of IDs
+    };
+
+    try {
         const response = await axios.post(
             "https://apiv2.shiprocket.in/v1/external/orders/cancel",
             payload,
-            headers  // Pass headers correctly
+            headers
         );
 
-        // Return successful response
         res.status(200).json({
             success: true,
             data: response.data,
@@ -288,28 +226,15 @@ export const cancelOrder = async (req, res) => {
         console.error("Error cancelling order:", err.message || err);
 
         if (err.response) {
-            console.error("Error Response Status:", err.response.status);
-            console.error("Error Response Data:", err.response.data);
+            const statusCode = err.response.status || 502;
+            const message = err.response.data?.message || "Shiprocket API responded with an error";
+            throw new ApiError(statusCode, message);
         } else if (err.request) {
-            console.error("No Response Received. Request Details:", err.request);
+            throw new ApiError(504, "No response from Shiprocket API (Gateway Timeout)");
         } else {
-            console.error("Request Error:", err.message);
+            throw new ApiError(500, `Shiprocket communication error: ${err.message}`);
         }
-
-        // Return an error response
-        res.status(500).json({
-            success: false,
-            error: err.response?.data || err.message || "An unknown error occurred",
-            hint: "Ensure the order ID is valid and headers contain correct authorization",
-            troubleshooting: {
-                possibleCauses: [
-                    "Invalid Shiprocket API URL or incorrect endpoint",
-                    "Missing or incorrect headers",
-                    "API request rate limit exceeded",
-                    "Order ID not found"
-                ]
-            }
-        });
     }
-};
+});
+
 

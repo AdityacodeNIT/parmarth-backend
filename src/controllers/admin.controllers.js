@@ -1,10 +1,10 @@
 import { User } from "../models/user.model.js";
 import { Product } from "../models/product.models.js";
 import { Order } from "../models/order.models.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import { response } from "express";
 
-const orderlist = async (req, res) => {
-        try {
+const orderlist = asyncHandler(async (req, res) => {
                 const orders = await Order.aggregate([
                         { $unwind: "$items" },
                         {
@@ -54,13 +54,10 @@ const orderlist = async (req, res) => {
                         },
                 ]);
                 res.status(200).json(orders);
-        } catch (error) {
-                res.status(500).json({ error: error.message });
-        }
-};
+        });
 
-const userlist = async (req, res) => {
-        try {
+const userlist = asyncHandler(async (req, res) => {
+
                 const order = await User.aggregate([
                         {
                                 $project: {
@@ -71,14 +68,10 @@ const userlist = async (req, res) => {
                                 },
                         },
                 ]);
-                res.status(200).json(order);
-        } catch (error) {
-                response.status(500).json({ error: error.message });
-        }
-};
+                res.status(200).json(order);      
+});
 
-const productList = async (req, res) => {
-        try {
+const productList = asyncHandler(async (req, res) => {
                 const products = await Product.aggregate([
                         {
                                 $project: {
@@ -90,13 +83,9 @@ const productList = async (req, res) => {
                         },
                 ]);
                 res.status(200).json(products);
-        } catch (error) {
-                throw error;
-        }
-};
+});
 
-export const deleteUser = async (req, res) => {
-        try {
+export const deleteUser = asyncHandler(async (req, res) => {
             const userId = req.params.id;
     
             // Find the user first
@@ -115,15 +104,9 @@ export const deleteUser = async (req, res) => {
             const deletedUser = await User.findByIdAndDelete(userId);
     
             res.status(200).json({ message: "User deleted successfully", deletedUser });
+    });
     
-        } catch (error) {
-            console.error("Error deleting user:", error);
-            res.status(500).json({ message: "Internal server error" });
-        }
-    };
-    
-    export const updateUserRole = async (req, res) => {
-        try {
+    export const updateUserRole = asyncHandler(async (req, res) => {
                 const userId=req.params.id;
                 const newRole=req.body.role;
      
@@ -136,31 +119,23 @@ export const deleteUser = async (req, res) => {
     
             if (!user) return res.status(404).json({ error: "User not found" });
     
-            res.json({ message: `User promoted to ${newRole}`, user });
-        } catch (error) {
-            res.status(500).json({ error: "Role update failed" });
-        }
-    };
+            res.json({ message: `User promoted to ${newRole}`, user }); 
+    });
 
-    export const manageOrders = async (req, res) => {
-        try {
+    export const manageOrders = asyncHandler(async (req, res) => {
+        
             const orders = await Order.find();
             res.json(orders);
-        } catch (error) {
-            res.status(500).json({ error: "Server error" });
-        }
-    };
+        });
 
 
-    export const getProducts = async (req, res) => {
-        try {
+    export const getProducts = asyncHandler(async (req, res) => {
+   
             let filter = req.user.role === "seller" ? { seller: req.user._id } : {}; 
             const products = await Product.find(filter);
             res.json(products);
-        } catch (error) {
-            res.status(500).json({ error: "Error fetching products" });
-        }
-    };
+        
+    });
     
 
     

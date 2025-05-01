@@ -4,34 +4,28 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { Review } from "../models/review.models.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
-const review = async (req, res) => {
-    try {
-        const { productId, rating, message } = req.body;
-        const userId = req.user.id; // Assuming user is authenticated
+const addReview = asyncHandler(async (req, res) => {
+    const { productId, rating, message } = req.body;
+    const userId = req.user.id;
 
-        // 🔴 Check if the user already reviewed this product
-        const existingReview = await Review.findOne({ userId, productId });
-
-        if (existingReview) {
-            return res.status(400).json({ message: "You have already reviewed this product" });
-        }
-
-        // ✅ Create new review
-        const newReview = await  Review.create({ userId, productId, rating, message });
-
-        return res.status(201).json(new ApiResponse(200, newReview));
-    } catch (error) {
-        console.error("Error adding review:", error);
-        res.status(500).json({ message: "Internal server error" });
+    if (!productId || !rating) {
+        throw new ApiError(400, "Product ID and rating are required");
     }
-};
+    const existingReview = await Review.findOne({ userId, productId });
+
+    if (existingReview) {
+        throw new ApiError(400, "You have already reviewed this product");
+    }
+    const newReview = await Review.create({ userId, productId, rating, message });
+
+    res.status(201).json(new ApiResponse(201, newReview, "Review added successfully"));
+});
 
 
 const averageReview = asyncHandler(async (req, res) => {
         const { productId } = req.body;
-        // Convert productId to ObjectId
         const objectId = new ObjectId(productId);
-        // Aggregation to calculate the average rating for the product
+
         const result = await Review.aggregate([
                 {
                         $match: { productId: objectId },
@@ -51,14 +45,9 @@ const averageReview = asyncHandler(async (req, res) => {
 });
 
 const getReview = asyncHandler(async (req, res) => {
-
-      
-
         const id  = req.params.id;
         const reviews = await Review.find({productId:id}).populate("userId", "fullName"); // Populate userId with name and email fields
       
-
-    
         if (reviews.length === 0) {
             throw new ApiError(404, "No reviews found");
         } 
@@ -67,4 +56,4 @@ const getReview = asyncHandler(async (req, res) => {
     });
     
 
-export { review, averageReview,getReview };
+export { addReview, averageReview,getReview };

@@ -115,10 +115,6 @@ const getAllAddresses=asyncHandler(async(req,res)=>{
 
                 ), 
         )
-
-
-
-
 })
 
 export { addAddress, getAddress,getAllAddresses };
