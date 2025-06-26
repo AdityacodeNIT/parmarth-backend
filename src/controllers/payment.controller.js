@@ -13,7 +13,6 @@ const checkout = asyncHandler(async (req, res) => {
       // Auto-capture the payment
     };
     const order = await razorpay.orders.create(options);
-    console.log(order);
   
 
     // Redirect the user to the Razorpay payment page
@@ -21,7 +20,7 @@ const checkout = asyncHandler(async (req, res) => {
   } 
   catch (error) {
     console.error(error);
-    throw new ApiError(500, "Error creating order");
+    throw new ApiError(500,error, "Error in the payements section");
   }
 });
 

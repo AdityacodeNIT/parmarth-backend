@@ -4,7 +4,6 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import Jwt from "jsonwebtoken";
-import redis from "../utils/redisClients.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
         try {
@@ -174,47 +173,29 @@ const loginUser = asyncHandler(async (req, res) => {
 });
 
 const logOutUser = asyncHandler(async (req, res) => {
-        const accessToken = req.cookies?.accessToken;
-        const refreshToken = req.cookies?.refreshToken;
-
         if (!req.user) {
                 return res
                         .status(401)
                         .json(new ApiResponse(401, {}, "Unauthorized"));
         }
 
-        if (accessToken) {
-                const decoded = Jwt.decode(accessToken);
-                if (decoded?.exp) {
-                        const expiresIn =
-                                decoded.exp - Math.floor(Date.now() / 1000);
-                        await redis.set(
-                                `bl_${accessToken}`,
-                                "1",
-                                "EX",
-                                expiresIn,
-                        );
-                }
-        }
-
-        // Remove refreshToken from DB
         await User.findByIdAndUpdate(
-                req.user._id,
+                req.user?._id,
                 { $unset: { refreshToken: 1 } },
                 { new: true },
         );
 
-        // Clear cookies
-        const cookieOptions = {
+        const options = {
                 httpOnly: true,
                 secure: true,
                 sameSite: "None",
         };
 
-        res.clearCookie("accessToken", cookieOptions)
-                .clearCookie("refreshToken", cookieOptions)
+        return res
                 .status(200)
-                .json(new ApiResponse(200, {}, "User Logged Out Successfully"));
+                .clearCookie("accessToken", options)
+                .clearCookie("refreshToken", options)
+                .json(new ApiResponse(200, {}, "User Logged Out"));
 });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
