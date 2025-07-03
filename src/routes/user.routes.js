@@ -7,20 +7,16 @@ import {
         updateAccountdetail,
         updateUserAvatar,
         changePassword,
+        verifyOtp,
 } from "../controllers/user.controller.js";
 
 import { updateUserRole, userlist,deleteUser } from "../controllers/admin.controllers.js";
-
 import { verifyRole } from "../middlewares/role.middleware.js";
-
 import { upload } from "../middlewares/multer.middleware.js";
-
 import { isAuthenticated, verifyJWT } from "../middlewares/auth.middleware.js";
+import { validateRegister } from "../middlewares/validation.middleware.js";
 
 const router = Router();
-
-
-
 
 router.route("/register").post(
         upload.fields([
@@ -33,6 +29,7 @@ router.route("/register").post(
                         maxCount: 1,
                 },
         ]),
+        validateRegister,
         isAuthenticated,
         registerUser,
 );
@@ -40,13 +37,14 @@ router.route("/register").post(
 router.route("/login").post(isAuthenticated,loginUser);
 
 router.route("/logout").post(verifyJWT, logOutUser);
+router.route("/verify-otp").post(verifyOtp);
 
-router.route("/updateAvatar").post(upload.single("avatar"), updateUserAvatar);
+router.route("/updateAvatar").post(upload.single("avatar"),verifyJWT, updateUserAvatar);
+
 router.route("/updateUserdetail").post(verifyJWT, updateAccountdetail);
+
 router.route("/changePassword").post(verifyJWT, changePassword);
 // Secured Routes
-
-
 
 router.route("/refresh-token").post(refreshAccessToken);
 
@@ -57,10 +55,5 @@ router.route("/deleteUser/:id").delete(verifyJWT, verifyRole("superadmin"), dele
 router.route("/userList").get(verifyJWT, verifyRole("superadmin"), userlist);
 
 router.route("/updateUserPost/:id").post(verifyJWT, verifyRole("superadmin"), updateUserRole);
-
-
-
-
-
 
 export default router;

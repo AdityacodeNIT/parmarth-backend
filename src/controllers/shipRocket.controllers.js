@@ -22,6 +22,8 @@ authenticate().catch((err) => console.error(err.message));
 export const createOrderController = asyncHandler(async (req, res) => {
 
         const { items } = req.body;
+        console.log("Items received for order creation:", items);
+    
       
         if (!items || items.length === 0) {
             return res.status(400).json({ error: "No items provided" });
@@ -88,9 +90,11 @@ export const createOrderController = asyncHandler(async (req, res) => {
 
             groupedOrders[Address_id].sub_total += product.price * quantity;
         }
+        console.log("Grouped Orders:", groupedOrders);
       
 
         const result = await createOrder(groupedOrders);
+
 
 
         res.status(201).json({
@@ -120,6 +124,7 @@ export const getAllOrdersController = asyncHandler(async (req, res) => {
 
         if (shiprocketError.response) {
             const statusCode = shiprocketError.response.status || 502;
+            console.log(shiprocketError.response.data);
             const shiprocketMessage = shiprocketError.response.data.message || 'Error from Shiprocket API';
 
             return res.status(statusCode).json({
@@ -146,14 +151,13 @@ export const getAllOrdersController = asyncHandler(async (req, res) => {
         });
     }
 
-    console.log("Fetched orders:", orders);
 
     // Role-based filtering
     if (req.user.role === 'customer') {
         const filteredOrders = orders.data.filter(order => {
             return order.customer_email === req.user?.email;
         });
-        console.log("Filtered orders for customer:", filteredOrders);
+    
         orders.data = filteredOrders;
     } else {
         console.log("Admin user detected. Returning all orders...");

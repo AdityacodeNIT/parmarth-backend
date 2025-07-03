@@ -22,7 +22,8 @@ const addProduct = asyncHandler(async (req, res) => {
         throw new ApiError(409, "Product already exists.");
     }
 
-    // Check for product image from multer
+  // Check for product image from multer
+
     const ProductImagelocalPath = req.file?.path;
     if (!ProductImagelocalPath) {
         throw new ApiError(400, "Product image is required.");
@@ -58,8 +59,6 @@ const addProduct = asyncHandler(async (req, res) => {
     return res.status(201).json(new ApiResponse(201, product, "Product added successfully."));
 });
 
-
-
 const searchresult = asyncHandler(async (req, res) => {
         const { name } = req.body;
 
@@ -77,8 +76,6 @@ const searchresult = asyncHandler(async (req, res) => {
 
         return res.json({ result });
 });
-
-
 
 
 export const searchByImage = async (req, res) => {
@@ -271,6 +268,8 @@ const updateProduct = asyncHandler(async (req, res) => {
                 res.json(product);
         }
 });
+
+
     
 
 

@@ -1,9 +1,11 @@
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.model.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import Jwt from "jsonwebtoken";
+import { generateOTP } from "../utils/otpGenerator.js";
+import { sendOTP } from "../utils/Nodemailer.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
         try {
@@ -26,102 +28,76 @@ const generateAccessAndRefreshToken = async (userId) => {
 
 // registering user
 const registerUser = asyncHandler(async (req, res) => {
-        // Get user details from frontend
-        const { fullName, email, username, password } = req.body;
+    const { fullName, email, username, password } = req.body;
 
-        // Check for missing fields
-        if (
-                [fullName, email, username, password].some(
-                        (field) => field?.trim() === "",
-                )
-        ) {
-                throw new ApiError(400, "All fields are required");
+    if ([fullName, email, username, password].some(field => field?.trim() === "")) {
+        throw new ApiError(400, "All fields are required");
+    }
+
+    const existedUser = await User.findOne({
+        $or: [{ username }, { email }],
+    });
+
+    if (existedUser) {
+        throw new ApiError(409, "User with email or username already exists");
+    }
+
+    const avatarlocalPath = req.files?.avatar?.[0]?.path;
+    const coverImageLocalPath = req.files?.coverImage?.[0]?.path;
+
+    let avatar, coverImage;
+
+    if (avatarlocalPath) {
+        try {
+            avatar = await uploadOnCloudinary(avatarlocalPath);
+        } catch (err) {
+            throw new ApiError(500, "Error uploading avatar");
         }
+    }
 
-        const existedUser = await User.findOne({
-                $or: [{ username }, { email }],
+    if (coverImageLocalPath) {
+        try {
+            coverImage = await uploadOnCloudinary(coverImageLocalPath);
+        } catch (err) {
+            throw new ApiError(500, "Error uploading cover image");
+        }
+    }
+
+    // Generate OTP before user creation
+    const otp = generateOTP();
+
+    // Create unverified user
+    let user;
+    try {
+        user = await User.create({
+            fullName,
+            avatar: avatar?.url || "",
+            coverImage: coverImage?.url || "",
+            email,
+            password,
+            username: username.toLowerCase(),
+            otp,
+            otpExpiry: Date.now() + 5 * 60 * 1000,
+            isVerified: false,
         });
+    } catch (error) {
+        throw new ApiError(500, "Error creating user in DB");
+    }
 
-        if (existedUser) {
-                throw new ApiError(
-                        409,
-                        "User with email or username already exists",
-                );
-        }
+    try {
+        await sendOTP(email, otp);
+    } catch (error) {
+        console.error("OTP sending failed:", error);
+        throw new ApiError(500, "Failed to send OTP");
+    }
 
-        const avatarlocalPath = req.files?.avatar?.[0]?.path;
-        let coverImageLocalPath;
-
-        // Handle cover image if provided
-        if (
-                req.files &&
-                Array.isArray(req.files.coverImage) &&
-                req.files.coverImage.length > 0
-        ) {
-                coverImageLocalPath = req.files.coverImage[0]?.path;
-        }
-
-        if (!avatarlocalPath) {
-                throw new ApiError(400, "Avatar file is required");
-        }
-
-        let avatar;
-        try {
-                avatar = await uploadOnCloudinary(avatarlocalPath);
-        } catch (error) {
-                console.error("Error uploading avatar:", error);
-                throw new ApiError(500, "Error uploading avatar");
-        }
-
-        let coverImage;
-        if (coverImageLocalPath) {
-                try {
-                        coverImage =
-                                await uploadOnCloudinary(coverImageLocalPath);
-                } catch (error) {
-                        console.error("Error uploading cover image:", error);
-                        throw new ApiError(500, "Error uploading cover image");
-                }
-        }
-
-        // Create user in the database
-        let user;
-        try {
-                user = await User.create({
-                        fullName,
-                        avatar: avatar.url,
-                        coverImage: coverImage?.url || "",
-                        email,
-                        password,
-                        username: username.toLowerCase(),
-                });
-        } catch (error) {
-                console.error("Error creating user in DB:", error);
-                throw new ApiError(500, "Error creating user in database");
-        }
-
-        // Retrieve the created user without password and refresh token fields
-        const createdUser = await User.findById(user._id).select(
-                "-password -refreshToken",
-        );
-
-        if (!createdUser) {
-                throw new ApiError(
-                        500,
-                        "User created but could not be retrieved",
-                );
-        }
-
-        return res
-                .status(201)
-                .json(
-                        new ApiResponse(
-                                200,
-                                createdUser,
-                                "Registered successfully",
-                        ),
-                );
+    return res.status(201).json({
+        success: true,
+        message: "OTP sent to email",
+        userId: user._id, // Safe to store on frontend
+    });
 });
+
 
 const loginUser = asyncHandler(async (req, res) => {
         const { email, username, password } = req.body;
@@ -140,9 +116,14 @@ const loginUser = asyncHandler(async (req, res) => {
 
         const isPasswordValid = await user.isPasswordCorrect(password);
 
+      
         if (!isPasswordValid) {
                 throw new ApiError(401, "Invalid user credentials");
         }
+             if (!user.isVerified) {
+        throw new ApiError(403, "Please verify your email with the OTP first");
+    }
+
 
         const { accessToken, refreshToken } =
                 await generateAccessAndRefreshToken(user._id);
@@ -172,6 +153,46 @@ const loginUser = asyncHandler(async (req, res) => {
                 );
 });
 
+export const verifyOtp = asyncHandler(async (req, res) => {
+    const { userId, otp } = req.body;
+    console.log("Received userId:", userId);
+
+    if (!userId || !otp) {
+        throw new ApiError(400, "User ID and OTP are required");
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    if (user.isVerified) {
+        return res.status(200).json(new ApiResponse(200, {}, "User already verified"));
+    }
+
+    // Check if OTP matches
+    if (user.otp !== otp) {
+        throw new ApiError(400, "Incorrect OTP");
+    }
+
+    // Check if OTP expired
+    if (user.otpExpiry < Date.now()) {
+        throw new ApiError(400, "OTP has expired");
+    }
+
+    // Mark user as verified and clear OTP fields
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpiry = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    return res.status(200).json(
+        new ApiResponse(200, {}, "OTP verified successfully")
+    );
+});
+
+
+
 const logOutUser = asyncHandler(async (req, res) => {
         if (!req.user) {
                 return res
@@ -197,6 +218,43 @@ const logOutUser = asyncHandler(async (req, res) => {
                 .clearCookie("refreshToken", options)
                 .json(new ApiResponse(200, {}, "User Logged Out"));
 });
+
+
+export const resendOTP = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    if (user.otpExpiry && user.otpExpiry > Date.now()) {
+    throw new ApiError(429, "Please wait before requesting another OTP");
+}
+
+
+    if (!email || email.trim() === "") {
+        throw new ApiError(400, "Email is required");
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    if (user.isVerified) {
+        throw new ApiError(400, "User is already verified");
+    }
+
+    const { opt } = generateOTP(); // your OTP utility
+    user.otp = opt;
+    user.otpExpiry = Date.now() + 5 * 60 * 1000;
+
+    await user.save({ validateBeforeSave: false });
+
+    await sendOTP(email, opt); // your mail utility
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, {}, "OTP resent successfully"));
+});
+
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
         const incomingrefreshToken = req.cookies.refreshToken;
@@ -354,7 +412,9 @@ const updateAccountdetail = asyncHandler(async (req, res) => {
 
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
-        const avatarLocalPath = req.files?.path;
+        const avatarLocalPath = req.file?.path;
+
+
         if (!avatarLocalPath) {
                 throw new ApiError(400, "Avatar File is missing");
         }
@@ -371,20 +431,28 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
                 await deleteFromCloudinary(currentUser.avatar);
         }
 
-        const updateuser = await User.findByIdAndUpdate(
-                req.user?._id,
-                {
-                        $set: { avatar: avatar.url },
-                },
-                { new: true },
-        ).select("-password");
+        console.log(avatar.url);
+
+   
+
+        const updatedUser = await User.findByIdAndUpdate(
+  req.user?._id,
+  { $set: { avatar: avatar.url } },
+  { new: true }
+).select("-password");
+
+if (!updatedUser) {
+  throw new ApiError(404, "User not found after avatar update");
+}
+
+
 
         return res
                 .status(200)
                 .json(
                         new ApiResponse(
                                 200,
-                                updateuser,
+                               {user:updatedUser},
                                 "image updated succesfully",
                         ),
                 );
