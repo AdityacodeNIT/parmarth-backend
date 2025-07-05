@@ -20,13 +20,13 @@ const addReview = asyncHandler(async (req, res) => {
 
     res.status(201).json(new ApiResponse(201, newReview, "Review added successfully"));
 });
-
-
+   
+   
 const averageReview = asyncHandler(async (req, res) => {
         const { productId } = req.body;
         const objectId = new ObjectId(productId);
-
-        const result = await Review.aggregate([
+    
+         const result = await Review.aggregate([
                 {
                         $match: { productId: objectId },
                 },
