@@ -83,3 +83,47 @@ export const createOrder = async (orders) => {
         }
     };
     
+
+/**
+ * Checks if delivery is available to the given pincode using Shiprocket's serviceability API.
+ *
+ * @param {string} deliveryPincode - The destination pincode to check.
+ * @param {number} cod - Set to 1 to check for COD availability, 0 for prepaid (default: 0).
+ * @param {number} weight - The weight of the package in kg (default: 1).
+ * @param {string} pickupPincode - Your warehouse or origin pincode (default: "110030").
+ *
+ * @returns {Promise<{ available: boolean, eta: string | null, cod: boolean, couriers: Array }>}
+ */
+export const checkServiceability = async (
+  deliveryPincode,
+  cod =1,
+  weight = 1,
+  pickupPincode = "796012"
+) => {
+  const headers = await getHeaders(); // Includes Authorization token
+
+  const url = `https://apiv2.shiprocket.in/v1/external/courier/serviceability?pickup_postcode=${pickupPincode}&delivery_postcode=${deliveryPincode}&cod=${cod}&weight=${weight}`;
+
+  try {
+    const response = await axios.get(url, headers);
+    const couriers = response.data?.data?.available_courier_companies || [];
+
+    return {
+      available: couriers.length > 0,
+      eta: couriers[0]?.etd || null,
+      cod: couriers.some((c) => c.cod === 1),
+      couriers,
+    };
+  } catch (error) {
+    console.error("Shiprocket serviceability check failed:", error.message);
+    return {
+      available: false,
+      eta: null,
+      cod: false,
+      couriers: [],
+    };
+  }
+};
+
+
+

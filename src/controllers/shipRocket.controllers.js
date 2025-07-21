@@ -1,4 +1,4 @@
-import { authenticate, getHeaders, createOrder } from "../utils/ShipRocket.js";
+import { authenticate, getHeaders, createOrder,checkServiceability } from "../utils/ShipRocket.js";
 import { Product } from "../models/product.models.js";
 import { Address } from "../models/address.models.js";
 import axios from "axios";
@@ -33,7 +33,9 @@ export const createOrderController = asyncHandler(async (req, res) => {
         const groupedOrders = {};
 
         for (const item of items) {
-            const { productId, quantity, Address_id } = item;
+            const { productId, quantity, Address_id,paymentMethod } = item;
+            console.log("Payment method received from frontend:", paymentMethod);
+
             const product = await Product.findById(productId);
 
             if (!product) {
@@ -54,6 +56,11 @@ export const createOrderController = asyncHandler(async (req, res) => {
                     throw new ApiError(404, `Address with ID ${Address_id} not found`);
                 }
 
+                const isAvailable = await checkServiceability(address.postalCode);
+            if (!isAvailable) {
+                throw new ApiError(400, `Delivery unavailable for pincode ${address.postalCode}`);
+            }
+
                 groupedOrders[Address_id] = {
                     order_id: uuidv4(),
                     order_date: new Date().toISOString(),
@@ -70,7 +77,7 @@ export const createOrderController = asyncHandler(async (req, res) => {
                     shipping_is_billing: true,
 
                     order_items: [],
-                    payment_method: "Prepaid",
+                    payment_method: paymentMethod,
                     sub_total: 0,
                     length: 10, // Default values for now
                     breadth: 10,
@@ -241,4 +248,31 @@ export const cancelOrder = asyncHandler(async (req, res) => {
     }
 });
 
+
+
+
+
+
+export const checkAvailabilityController = asyncHandler(async (req, res) => {
+  const { pincode } = req.body;
+
+  if (!pincode || pincode.length !== 6) {
+    throw new ApiError(400, "Valid 6-digit pincode is required");
+  }
+   const result = await checkServiceability(pincode);
+   console.log(result) // this should return { data: [...] }
+
+   
+    
+   
+
+  return res.status(200).json({
+    success: true,
+    data: {
+      available: result.available,
+      eta: result.eta || "Not specified",
+      cod: result.cod || false,
+    },
+  });
+});
 

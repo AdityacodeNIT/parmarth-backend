@@ -2,6 +2,7 @@ import express from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import {
         cancelOrder,
+        checkAvailabilityController,
         createOrderController,
         getAllOrdersController,
         getOrder,
@@ -15,6 +16,7 @@ shiprouter.post("/order", verifyJWT, createOrderController);
 shiprouter.get("/getOrder", verifyJWT, getAllOrdersController);
 
 shiprouter.get("/getOrder/:id", verifyJWT, getOrder);
+shiprouter.post("/check",verifyJWT,checkAvailabilityController)
 
 shiprouter.post("/cancelOrder/:id", verifyJWT, cancelOrder);
 
