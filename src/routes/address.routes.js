@@ -6,7 +6,7 @@ import { addAddress, getAddress, getAllAddresses } from "../controllers/address.
 const addressrouter = Router();
 
 addressrouter.route("/addAddress").post(verifyJWT, addAddress);
-addressrouter.route("/getAddress").get(verifyJWT, getAddress);
+addressrouter.route("/getAddress/:id").get(verifyJWT, getAddress);
 
 addressrouter.route("/getAllAddresses").get(verifyJWT,getAllAddresses)
 

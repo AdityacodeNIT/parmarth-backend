@@ -5,6 +5,7 @@ import axios from "axios";
 import { v4 as uuidv4 } from 'uuid';
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
+import fs from "fs"
 
 
 
@@ -252,19 +253,22 @@ export const cancelOrder = asyncHandler(async (req, res) => {
 
 
 
-
 export const checkAvailabilityController = asyncHandler(async (req, res) => {
   const { pincode } = req.body;
 
   if (!pincode || pincode.length !== 6) {
     throw new ApiError(400, "Valid 6-digit pincode is required");
   }
-   const result = await checkServiceability(pincode);
-   console.log(result) // this should return { data: [...] }
 
-   
-    
-   
+  const result = await checkServiceability(pincode);
+
+  // result.couriers is where the courier options are listed
+  const couriers = result?.couriers || [];
+
+  // Select the best one (for now, let's pick the cheapest as example)
+  const bestCourier = couriers.reduce((min, curr) => {
+    return curr.freight_charge < min.freight_charge ? curr : min;
+  }, couriers[0]);
 
   return res.status(200).json({
     success: true,
@@ -272,7 +276,12 @@ export const checkAvailabilityController = asyncHandler(async (req, res) => {
       available: result.available,
       eta: result.eta || "Not specified",
       cod: result.cod || false,
+      deliveryCharge: bestCourier?.freight_charge ?? null,
+      courierName: bestCourier?.courier_name ?? null,
+      estimatedDays: bestCourier?.estimated_delivery_days ?? null,
     },
   });
 });
+
+
 
