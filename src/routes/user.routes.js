@@ -8,6 +8,7 @@ import {
         updateUserAvatar,
         changePassword,
         verifyOtp,
+      
 } from "../controllers/user.controller.js";
 
 import { updateUserRole, userlist,deleteUser } from "../controllers/admin.controllers.js";

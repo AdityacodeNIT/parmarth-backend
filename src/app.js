@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
 
 const app = express();
 
@@ -11,6 +12,7 @@ app.use(
             
         }),
 );
+app.use(helmet());
 
 app.use(express.json({ limit: "2mb" }));
 

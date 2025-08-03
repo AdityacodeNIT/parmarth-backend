@@ -2,7 +2,7 @@ import { User } from "../models/user.model.js";
 import { Product } from "../models/product.models.js";
 import { Order } from "../models/order.models.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { response } from "express";
+
 
 const orderlist = asyncHandler(async (req, res) => {
                 const orders = await Order.aggregate([

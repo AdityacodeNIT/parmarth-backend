@@ -157,11 +157,14 @@ export const verifyOtp = asyncHandler(async (req, res) => {
     const { userId, otp } = req.body;
     console.log("Received userId:", userId);
 
-    if (!userId || !otp) {
-        throw new ApiError(400, "User ID and OTP are required");
-    }
+  
 
     const user = await User.findById(userId);
+
+      if (!userId || !otp) {
+        throw new ApiError(400, "User ID and OTP are required");
+    } 
+
     if (!user) {
         throw new ApiError(404, "User not found");
     }
@@ -457,6 +460,7 @@ if (!updatedUser) {
                         ),
                 );
 });
+
 export {
         registerUser,
         loginUser,
@@ -467,3 +471,4 @@ export {
         updateAccountdetail,
         updateUserAvatar,
 };
+
