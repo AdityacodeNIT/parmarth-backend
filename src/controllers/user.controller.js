@@ -4,29 +4,28 @@ import { User } from "../models/user.model.js";
 import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import Jwt from "jsonwebtoken";
-import { generateOTP } from "../utils/otpGenerator.js";
-import { sendOTP } from "../utils/Nodemailer.js";
+// import { generateOTP } from "../utils/otpGenerator.js";
+// import { sendOTP } from "../utils/Nodemailer.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
-        try {
-                const user = await User.findById(userId);
-                if (!user) throw new ApiError(404, "User not found");
+    try {
+        const user = await User.findById(userId);
+        if (!user) throw new ApiError(404, "User not found");
 
-                const accessToken = user.generateAccessToken();
-                const refreshToken = user.generateRefreshToken();
+        const accessToken = user.generateAccessToken();
+        const refreshToken = user.generateRefreshToken();
 
-                // Store new refresh token
-                user.refreshToken = refreshToken;
-                await user.save({ validateBeforeSave: false });
+        user.refreshToken = refreshToken;
+        await user.save({ validateBeforeSave: false });
 
-                return { accessToken, refreshToken };
-        } catch (error) {
-                console.error("Error generating tokens:", error);
-                throw new ApiError(500, "Error generating tokens");
-        }
+        return { accessToken, refreshToken };
+    } catch (error) {
+        console.error("Error generating tokens:", error);
+        throw new ApiError(500, "Error generating tokens");
+    }
 };
 
-// registering user
+// registering user (no OTP)
 const registerUser = asyncHandler(async (req, res) => {
     const { fullName, email, username, password } = req.body;
 
@@ -50,7 +49,7 @@ const registerUser = asyncHandler(async (req, res) => {
     if (avatarlocalPath) {
         try {
             avatar = await uploadOnCloudinary(avatarlocalPath);
-        } catch (err) {
+        } catch {
             throw new ApiError(500, "Error uploading avatar");
         }
     }
@@ -58,15 +57,11 @@ const registerUser = asyncHandler(async (req, res) => {
     if (coverImageLocalPath) {
         try {
             coverImage = await uploadOnCloudinary(coverImageLocalPath);
-        } catch (err) {
+        } catch {
             throw new ApiError(500, "Error uploading cover image");
         }
     }
 
-    // Generate OTP before user creation
-    const otp = generateOTP();
-
-    // Create unverified user
     let user;
     try {
         user = await User.create({
@@ -76,304 +71,198 @@ const registerUser = asyncHandler(async (req, res) => {
             email,
             password,
             username: username.toLowerCase(),
-            otp,
-            otpExpiry: Date.now() + 5 * 60 * 1000,
-            isVerified: false,
+            isVerified: true, // directly mark verified
         });
-    } catch (error) {
+    } catch {
         throw new ApiError(500, "Error creating user in DB");
-    }
-
-    try {
-        await sendOTP(email, otp);
-    } catch (error) {
-        console.error("OTP sending failed:", error);
-        throw new ApiError(500, "Failed to send OTP");
     }
 
     return res.status(201).json({
         success: true,
-        message: "OTP sent to email",
-        userId: user._id, // Safe to store on frontend
+        message: "User registered successfully",
+        userId: user._id,
     });
 });
 
-
 const loginUser = asyncHandler(async (req, res) => {
-        const { email, username, password } = req.body;
+    const { email, username, password } = req.body;
 
-        if (!username && !email) {
-                throw new ApiError(400, "username or email is required");
-        }
-
-        const user = await User.findOne({
-                $or: [{ username }, { email }],
-        });
-
-        if (!user) {
-                throw new ApiError(404, "User does not exist");
-        }
-
-        const isPasswordValid = await user.isPasswordCorrect(password);
-
-      
-        if (!isPasswordValid) {
-                throw new ApiError(401, "Invalid user credentials");
-        }
-             if (!user.isVerified) {
-        throw new ApiError(403, "Please verify your email with the OTP first");
+    if (!username && !email) {
+        throw new ApiError(400, "username or email is required");
     }
 
-
-        const { accessToken, refreshToken } =
-                await generateAccessAndRefreshToken(user._id);
-
-        const loggedInUser = await User.findById(user._id).select("-password ");
-
-        const options = {
-                httpOnly: true,
-                secure: true,
-                sameSite: "None",
-        };
-
-        return res
-
-                .status(200)
-                .cookie("refreshToken", refreshToken, options)
-                .cookie("accessToken", accessToken, options)
-
-                .json(
-                        new ApiResponse(
-                                200,
-                                {
-                                        user: loggedInUser,
-                                },
-                                "User logged In Successfully",
-                        ),
-                );
-});
-
-export const verifyOtp = asyncHandler(async (req, res) => {
-    const { userId, otp } = req.body;
-    console.log("Received userId:", userId);
-
-  
-
-    const user = await User.findById(userId);
-
-      if (!userId || !otp) {
-        throw new ApiError(400, "User ID and OTP are required");
-    } 
+    const user = await User.findOne({
+        $or: [{ username }, { email }],
+    });
 
     if (!user) {
-        throw new ApiError(404, "User not found");
+        throw new ApiError(404, "User does not exist");
     }
 
-    if (user.isVerified) {
-        return res.status(200).json(new ApiResponse(200, {}, "User already verified"));
+    const isPasswordValid = await user.isPasswordCorrect(password);
+
+    if (!isPasswordValid) {
+        throw new ApiError(401, "Invalid user credentials");
     }
 
-    // Check if OTP matches
-    if (user.otp !== otp) {
-        throw new ApiError(400, "Incorrect OTP");
-    }
+    // OTP verification removed
+    // if (!user.isVerified) {
+    //     throw new ApiError(403, "Please verify your email with the OTP first");
+    // }
 
-    // Check if OTP expired
-    if (user.otpExpiry < Date.now()) {
-        throw new ApiError(400, "OTP has expired");
-    }
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
 
-    // Mark user as verified and clear OTP fields
-    user.isVerified = true;
-    user.otp = undefined;
-    user.otpExpiry = undefined;
-    await user.save({ validateBeforeSave: false });
+    const loggedInUser = await User.findById(user._id).select("-password");
 
-    return res.status(200).json(
-        new ApiResponse(200, {}, "OTP verified successfully")
-    );
-});
-
-
-
-const logOutUser = asyncHandler(async (req, res) => {
-        if (!req.user) {
-                return res
-                        .status(401)
-                        .json(new ApiResponse(401, {}, "Unauthorized"));
-        }
-
-        await User.findByIdAndUpdate(
-                req.user?._id,
-                { $unset: { refreshToken: 1 } },
-                { new: true },
-        );
-
-        const options = {
-                httpOnly: true,
-                secure: true,
-                sameSite: "None",
-        };
-
-        return res
-                .status(200)
-                .clearCookie("accessToken", options)
-                .clearCookie("refreshToken", options)
-                .json(new ApiResponse(200, {}, "User Logged Out"));
-});
-
-
-export const resendOTP = asyncHandler(async (req, res) => {
-    const { email } = req.body;
-
-    if (user.otpExpiry && user.otpExpiry > Date.now()) {
-    throw new ApiError(429, "Please wait before requesting another OTP");
-}
-
-
-    if (!email || email.trim() === "") {
-        throw new ApiError(400, "Email is required");
-    }
-
-    const user = await User.findOne({ email });
-
-    if (!user) {
-        throw new ApiError(404, "User not found");
-    }
-
-    if (user.isVerified) {
-        throw new ApiError(400, "User is already verified");
-    }
-
-    const { opt } = generateOTP(); // your OTP utility
-    user.otp = opt;
-    user.otpExpiry = Date.now() + 5 * 60 * 1000;
-
-    await user.save({ validateBeforeSave: false });
-
-    await sendOTP(email, opt); // your mail utility
+    const options = {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+    };
 
     return res
         .status(200)
-        .json(new ApiResponse(200, {}, "OTP resent successfully"));
+        .cookie("refreshToken", refreshToken, options)
+        .cookie("accessToken", accessToken, options)
+        .json(
+            new ApiResponse(
+                200,
+                { user: loggedInUser },
+                "User logged In Successfully"
+            ),
+        );
 });
 
+const logOutUser = asyncHandler(async (req, res) => {
+    if (!req.user) {
+        return res
+            .status(401)
+            .json(new ApiResponse(401, {}, "Unauthorized"));
+    }
+
+    await User.findByIdAndUpdate(
+        req.user?._id,
+        { $unset: { refreshToken: 1 } },
+        { new: true },
+    );
+
+    const options = {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+    };
+
+    return res
+        .status(200)
+        .clearCookie("accessToken", options)
+        .clearCookie("refreshToken", options)
+        .json(new ApiResponse(200, {}, "User Logged Out"));
+});
+
+// 🔴 Removed verifyOtp and resendOTP completely
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
-        const incomingrefreshToken = req.cookies.refreshToken;
-        if (!incomingrefreshToken) {
-                throw new ApiError(401, "Unauthorized Request");
+    const incomingrefreshToken = req.cookies.refreshToken;
+    if (!incomingrefreshToken) {
+        throw new ApiError(401, "Unauthorized Request");
+    }
+
+    try {
+        const decodedToken = Jwt.verify(
+            incomingrefreshToken,
+            process.env.REFRESH_TOKEN_SECRET,
+        );
+
+        const user = await User.findById(decodedToken?._id);
+        if (!user) {
+            throw new ApiError(401, "Invalid refresh token");
         }
+
+        if (incomingrefreshToken !== user.refreshToken) {
+            throw new ApiError(
+                401,
+                "Refresh token is expired or does not match",
+            );
+        }
+
+        const currentAccessToken = req.cookies.accessToken;
 
         try {
-                const decodedToken = Jwt.verify(
-                        incomingrefreshToken,
-                        process.env.REFRESH_TOKEN_SECRET,
-                );
+            Jwt.verify(
+                currentAccessToken,
+                process.env.ACCESS_TOKEN_SECRET,
+            );
 
-                const user = await User.findById(decodedToken?._id);
-                if (!user) {
-                        throw new ApiError(401, "Invalid refresh token");
-                }
+            return res
+                .status(200)
+                .json(new ApiResponse(200, "Access token is still valid"));
+        } catch {
+            const accessToken = user.generateAccessToken();
 
-                if (incomingrefreshToken !== user.refreshToken) {
-                        throw new ApiError(
-                                401,
-                                "Refresh token is expired or does not match",
-                        );
-                }
+            const options = {
+                httpOnly: true,
+                secure: true,
+                sameSite: "None",
+            };
 
-                const currentAccessToken = req.cookies.accessToken;
-
-                try {
-                        Jwt.verify(
-                                currentAccessToken,
-                                process.env.ACCESS_TOKEN_SECRET,
-                        ); // Try to verify it
-
-                        return res
-                                .status(200)
-                                .json(
-                                        new ApiResponse(
-                                                200,
-                                                "Access token is still valid",
-                                        ),
-                                );
-                        // Generate new tokens
-                } catch {
-                        const { accessToken } =
-                                await user.generateAccessToken();
-
-                        const options = {
-                                httpOnly: true,
-                                secure: true,
-                                // secure: process.env.NODE_VAR=="production",
-                                sameSite: "None",
-                        };
-
-                        return res
-                                .status(200)
-                                .cookie("accessToken", accessToken, options)
-
-                                .json(
-                                        new ApiResponse(
-                                                200,
-                                                { accessToken },
-                                                "Tokens refreshed successfully",
-                                        ),
-                                );
-                }
-        } catch (error) {
-                console.error("Error during token refresh:", error);
-
-                if (error.name === "TokenExpiredError") {
-                        throw new ApiError(
-                                401,
-                                "Refresh token expired. Please log in again.",
-                        );
-                }
-
-                throw new ApiError(
-                        401,
-                        error.message || "Invalid refresh token",
+            return res
+                .status(200)
+                .cookie("accessToken", accessToken, options)
+                .json(
+                    new ApiResponse(
+                        200,
+                        { accessToken },
+                        "Tokens refreshed successfully",
+                    ),
                 );
         }
+    } catch (error) {
+        console.error("Error during token refresh:", error);
+
+        if (error.name === "TokenExpiredError") {
+            throw new ApiError(
+                401,
+                "Refresh token expired. Please log in again.",
+            );
+        }
+
+        throw new ApiError(401, error.message || "Invalid refresh token");
+    }
 });
 
 const changePassword = asyncHandler(async (req, res) => {
-        const { currentPassword, newPassword, confirmPassword } = req.body;
+    const { currentPassword, newPassword, confirmPassword } = req.body;
 
-        if (!(confirmPassword === newPassword)) {
-                throw new ApiError(404, "password not matching");
-        }
+    if (!(confirmPassword === newPassword)) {
+        throw new ApiError(404, "password not matching");
+    }
 
-        const user = await User.findById(req.user?.id);
-        const isPasswordCorrect = await user.isPasswordCorrect(currentPassword);
+    const user = await User.findById(req.user?.id);
+    const isPasswordCorrect = await user.isPasswordCorrect(currentPassword);
 
-        if (!isPasswordCorrect) {
-                throw new ApiError(400, "Invalid Password");
-        }
+    if (!isPasswordCorrect) {
+        throw new ApiError(400, "Invalid Password");
+    }
 
-        user.password = newPassword;
+    user.password = newPassword;
 
-        await user.save({ validateBeforeSave: false });
+    await user.save({ validateBeforeSave: false });
 
-        return res
-                .status(200)
-                .json(new ApiResponse(200, {}, "password changed succesfully"));
+    return res
+        .status(200)
+        .json(new ApiResponse(200, {}, "password changed succesfully"));
 });
 
-
 const getCurrentUser = asyncHandler(async (req, res) => {
-        return res
-                .status(200)
-                .json(
-                        new ApiResponse(
-                                200,
-                                req.user,
-                                "current user fetched succesfully",
-                        ),
-                );
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                req.user,
+                "current user fetched succesfully",
+            ),
+        );
 });
 
 const updateAccountdetail = asyncHandler(async (req, res) => {
@@ -388,16 +277,12 @@ const updateAccountdetail = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Unauthorized - user not found in request");
     }
 
-    // First, update the user
     await User.findByIdAndUpdate(
         userId,
-        {
-            $set: { fullName, email }
-        },
+        { $set: { fullName, email } },
         { new: true, runValidators: true }
     );
 
-    // Now fetch the updated user properly
     const updatedUser = await User.findById(userId).select("-password");
 
     if (!updatedUser) {
@@ -413,62 +298,51 @@ const updateAccountdetail = asyncHandler(async (req, res) => {
     );
 });
 
-
 const updateUserAvatar = asyncHandler(async (req, res) => {
-        const avatarLocalPath = req.file?.path;
+    const avatarLocalPath = req.file?.path;
 
+    if (!avatarLocalPath) {
+        throw new ApiError(400, "Avatar File is missing");
+    }
+    const avatar = await uploadOnCloudinary(avatarLocalPath);
 
-        if (!avatarLocalPath) {
-                throw new ApiError(400, "Avatar File is missing");
-        }
-        const avatar = await uploadOnCloudinary(avatarLocalPath);
+    if (!avatar.url) {
+        throw new ApiError(400, "error while uploading");
+    }
+    const currentUser = await User.findById(req.user?._id).select("-password");
 
-        if (!avatar.url) {
-                throw new ApiError(400, "error while uploading");
-        }
-        const currentUser = await User.findById(req.user?._id).select(
-                "-password",
+    if (currentUser && currentUser.avatar) {
+        await deleteFromCloudinary(currentUser.avatar);
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+        req.user?._id,
+        { $set: { avatar: avatar.url } },
+        { new: true }
+    ).select("-password");
+
+    if (!updatedUser) {
+        throw new ApiError(404, "User not found after avatar update");
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                { user: updatedUser },
+                "image updated succesfully",
+            ),
         );
-
-        if (currentUser && currentUser.avatar) {
-                await deleteFromCloudinary(currentUser.avatar);
-        }
-
-        console.log(avatar.url);
-
-   
-
-        const updatedUser = await User.findByIdAndUpdate(
-  req.user?._id,
-  { $set: { avatar: avatar.url } },
-  { new: true }
-).select("-password");
-
-if (!updatedUser) {
-  throw new ApiError(404, "User not found after avatar update");
-}
-
-
-
-        return res
-                .status(200)
-                .json(
-                        new ApiResponse(
-                                200,
-                               {user:updatedUser},
-                                "image updated succesfully",
-                        ),
-                );
 });
 
 export {
-        registerUser,
-        loginUser,
-        logOutUser,
-        refreshAccessToken,
-        getCurrentUser,
-        changePassword,
-        updateAccountdetail,
-        updateUserAvatar,
+    registerUser,
+    loginUser,
+    logOutUser,
+    refreshAccessToken,
+    getCurrentUser,
+    changePassword,
+    updateAccountdetail,
+    updateUserAvatar,
 };
-

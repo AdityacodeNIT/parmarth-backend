@@ -7,7 +7,7 @@ import {
         updateAccountdetail,
         updateUserAvatar,
         changePassword,
-        verifyOtp,
+      //  verifyOtp,
       
 } from "../controllers/user.controller.js";
 
@@ -38,7 +38,7 @@ router.route("/register").post(
 router.route("/login").post(isAuthenticated,loginUser);
 
 router.route("/logout").post(verifyJWT, logOutUser);
-router.route("/verify-otp").post(verifyOtp);
+//router.route("/verify-otp").post(verifyOtp);
 
 router.route("/updateAvatar").post(upload.single("avatar"),verifyJWT, updateUserAvatar);
 
