@@ -21,8 +21,10 @@ const generateSKU = (name) => {
 authenticate().catch((err) => console.error(err.message));
 
 export const createOrderController = asyncHandler(async (req, res) => {
+    console.log("Request body received from frontend:", req.body);
 
-        const { items } = req.body;
+        const { items,paymentMethod } = req.body;
+     
         console.log("Items received for order creation:", items);
     
       
@@ -34,7 +36,7 @@ export const createOrderController = asyncHandler(async (req, res) => {
         const groupedOrders = {};
 
         for (const item of items) {
-            const { productId, quantity, Address_id,paymentMethod } = item;
+            const { productId, quantity, Address_id } = item;
             console.log("Payment method received from frontend:", paymentMethod);
 
             const product = await Product.findById(productId);
@@ -61,6 +63,7 @@ export const createOrderController = asyncHandler(async (req, res) => {
             if (!isAvailable) {
                 throw new ApiError(400, `Delivery unavailable for pincode ${address.postalCode}`);
             }
+            console.log(req.user?.email)
 
                 groupedOrders[Address_id] = {
                     order_id: uuidv4(),
@@ -98,7 +101,7 @@ export const createOrderController = asyncHandler(async (req, res) => {
 
             groupedOrders[Address_id].sub_total += product.price * quantity;
         }
-        console.log("Grouped Orders:", groupedOrders);
+        // console.log("Grouped Orders:", groupedOrders);
       
 
         const result = await createOrder(groupedOrders);
@@ -113,6 +116,7 @@ export const createOrderController = asyncHandler(async (req, res) => {
 });
 
 export const getAllOrdersController = asyncHandler(async (req, res) => {
+    console.log("Fetching all orders for user:", req.user?.email);
     if (!req.user) {
         console.error('User not authenticated');
         throw new ApiError(401, "User not authenticated");
@@ -126,7 +130,10 @@ export const getAllOrdersController = asyncHandler(async (req, res) => {
             "https://apiv2.shiprocket.in/v1/external/orders",
             headers,
         );
+        console.log("Response from Shiprocket:", response.data);
+
         orders = response.data;
+        console.log(`Fetched ${orders.data.length} orders from Shiprocket`);
     } catch (shiprocketError) {
         console.error('Error fetching orders from Shiprocket:', shiprocketError);
 
@@ -161,10 +168,15 @@ export const getAllOrdersController = asyncHandler(async (req, res) => {
 
 
     // Role-based filtering
+    console.log("User role:", req.user.role);
+  
     if (req.user.role === 'customer') {
         const filteredOrders = orders.data.filter(order => {
+              console.log("User email:", order.customer_email);
             return order.customer_email === req.user?.email;
         });
+
+
     
         orders.data = filteredOrders;
     } else {
