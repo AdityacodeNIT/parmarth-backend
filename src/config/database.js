@@ -165,61 +165,66 @@ export class DatabaseManager {
     logger.info('User indexes created');
   }
 
-  async createProductIndexes() {
-    const Product = mongoose.model('Product');
-    
-    // Unique indexes
-    await Product.collection.createIndex({ sku: 1 }, { unique: true, background: true });
-    
-    // Query optimization indexes
-    await Product.collection.createIndex({ category: 1 }, { background: true });
-    await Product.collection.createIndex({ sellerId: 1 }, { background: true });
-    await Product.collection.createIndex({ status: 1 }, { background: true });
-    await Product.collection.createIndex({ price: 1 }, { background: true });
-    await Product.collection.createIndex({ createdAt: -1 }, { background: true });
-    await Product.collection.createIndex({ rating: -1 }, { background: true });
-    await Product.collection.createIndex({ sales: -1 }, { background: true });
-    
-    // Compound indexes for filtering and sorting
-    await Product.collection.createIndex(
-      { category: 1, status: 1, price: 1 }, 
-      { background: true }
-    );
-    
-    await Product.collection.createIndex(
-      { sellerId: 1, status: 1, createdAt: -1 }, 
-      { background: true }
-    );
-    
-    await Product.collection.createIndex(
-      { status: 1, rating: -1, sales: -1 }, 
-      { background: true }
-    );
-    
-    // Geospatial index if location-based features are added
-    // await Product.collection.createIndex({ location: '2dsphere' }, { background: true });
-    
-    // Text search index for product search
-    await Product.collection.createIndex(
-      { 
-        name: 'text', 
-        description: 'text', 
-        'tags': 'text',
-        sku: 'text'
-      },
-      { 
-        background: true,
-        weights: {
-          name: 10,
-          sku: 8,
-          tags: 5,
-          description: 1
-        }
-      }
-    );
+async createProductIndexes() {
+  const Product = mongoose.model('Product');
 
-    logger.info('Product indexes created');
-  }
+  // ✅ SKU: unique ONLY when present
+  await Product.collection.createIndex(
+    { sku: 1 },
+    {
+      unique: true,
+      partialFilterExpression: { sku: { $exists: true, $ne: null } },
+      background: true
+    }
+  );
+
+  // Query optimization indexes
+  await Product.collection.createIndex({ category: 1 }, { background: true });
+  await Product.collection.createIndex({ sellerId: 1 }, { background: true });
+  await Product.collection.createIndex({ status: 1 }, { background: true });
+  await Product.collection.createIndex({ price: 1 }, { background: true });
+  await Product.collection.createIndex({ createdAt: -1 }, { background: true });
+  await Product.collection.createIndex({ rating: -1 }, { background: true });
+  await Product.collection.createIndex({ sales: -1 }, { background: true });
+
+  // Compound indexes
+  await Product.collection.createIndex(
+    { category: 1, status: 1, price: 1 },
+    { background: true }
+  );
+
+  await Product.collection.createIndex(
+    { sellerId: 1, status: 1, createdAt: -1 },
+    { background: true }
+  );
+
+  await Product.collection.createIndex(
+    { status: 1, rating: -1, sales: -1 },
+    { background: true }
+  );
+
+  // Text search index
+  await Product.collection.createIndex(
+    {
+      name: 'text',
+      description: 'text',
+      tags: 'text',
+      sku: 'text'
+    },
+    {
+      background: true,
+      weights: {
+        name: 10,
+        sku: 8,
+        tags: 5,
+        description: 1
+      }
+    }
+  );
+
+  logger.info('Product indexes created');
+}
+
 
   async createOrderIndexes() {
     const Order = mongoose.model('Order');
