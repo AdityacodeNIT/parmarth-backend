@@ -327,23 +327,35 @@ export class DatabaseManager {
     logger.info('Payment indexes created');
   }
 
- async createWishlistIndexes() {
+async createWishlistIndexes() {
   const Wishlist = mongoose.model('Wishlist');
+  const existingIndexes = await Wishlist.collection.indexes();
 
-  // One wishlist per user
-  await Wishlist.collection.createIndex(
-    { userId: 1 },
-    { unique: true, background: true }
+  const hasUserIdIndex = existingIndexes.some(
+    i => i.name === 'userId_1'
   );
 
-  // Prevent same product being added twice per user
-  await Wishlist.collection.createIndex(
-    { userId: 1, 'items.productId': 1 },
-    { unique: true, background: true }
+  if (!hasUserIdIndex) {
+    await Wishlist.collection.createIndex(
+      { userId: 1 },
+      { unique: true, background: true }
+    );
+  }
+
+  const hasCompoundIndex = existingIndexes.some(
+    i => i.name === 'userId_1_items.productId_1'
   );
+
+  if (!hasCompoundIndex) {
+    await Wishlist.collection.createIndex(
+      { userId: 1, 'items.productId': 1 },
+      { unique: true, background: true }
+    );
+  }
 
   logger.info('Wishlist indexes created');
 }
+
 
 
   // Database health check
