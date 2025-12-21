@@ -168,54 +168,43 @@ export class DatabaseManager {
 async createProductIndexes() {
   const Product = mongoose.model('Product');
 
-  // ✅ SKU: unique ONLY when present
-  await Product.collection.createIndex(
-    { sku: 1 },
-    {
-      unique: true,
-      partialFilterExpression: { sku: { $exists: true, $ne: null } },
-      background: true
-    }
-  );
-
-  // Query optimization indexes
-  await Product.collection.createIndex({ category: 1 }, { background: true });
-  await Product.collection.createIndex({ sellerId: 1 }, { background: true });
-  await Product.collection.createIndex({ status: 1 }, { background: true });
+  // Single-field indexes
+  await Product.collection.createIndex({ Category: 1 }, { background: true });
+  await Product.collection.createIndex({ seller: 1 }, { background: true });
+  await Product.collection.createIndex({ isActive: 1 }, { background: true });
   await Product.collection.createIndex({ price: 1 }, { background: true });
-  await Product.collection.createIndex({ createdAt: -1 }, { background: true });
   await Product.collection.createIndex({ rating: -1 }, { background: true });
-  await Product.collection.createIndex({ sales: -1 }, { background: true });
+  await Product.collection.createIndex({ salesCount: -1 }, { background: true });
+  await Product.collection.createIndex({ createdAt: -1 }, { background: true });
 
   // Compound indexes
   await Product.collection.createIndex(
-    { category: 1, status: 1, price: 1 },
+    { Category: 1, isActive: 1, price: 1 },
     { background: true }
   );
 
   await Product.collection.createIndex(
-    { sellerId: 1, status: 1, createdAt: -1 },
+    { seller: 1, isActive: 1, createdAt: -1 },
     { background: true }
   );
 
   await Product.collection.createIndex(
-    { status: 1, rating: -1, sales: -1 },
+    { isActive: 1, rating: -1, salesCount: -1 },
     { background: true }
   );
 
-  // Text search index
+  // Text index
   await Product.collection.createIndex(
     {
       name: 'text',
       description: 'text',
       tags: 'text',
-      sku: 'text'
+    
     },
     {
       background: true,
       weights: {
         name: 10,
-        sku: 8,
         tags: 5,
         description: 1
       }
@@ -224,6 +213,7 @@ async createProductIndexes() {
 
   logger.info('Product indexes created');
 }
+
 
 
   async createOrderIndexes() {
