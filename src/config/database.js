@@ -11,33 +11,24 @@ export class DatabaseManager {
   async connect(uri, options = {}) {
     try {
       const defaultOptions = {
-        // Connection pool settings
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 5000,
         socketTimeoutMS: 45000,
-        serverSelectionTimeoutMS: 5000, // How long to try selecting a server
-        socketTimeoutMS: 45000, // How long a send or receive on a socket can take
-        
-   
-        
-        // Other optimizations
-        autoIndex: false, // Disable auto index creation
-        autoCreate: false, // Disable auto collection creation
-        
-        // Compression
+
+        autoIndex: false,
+        autoCreate: false,
+
         compressors: ['zlib'],
         zlibCompressionLevel: 6,
-        
+
         ...options
       };
 
       this.connection = await mongoose.connect(uri, defaultOptions);
       this.isConnected = true;
 
-      // Set up connection event listeners
       this.setupEventListeners();
 
-      // Create indexes in production
       if (process.env.NODE_ENV === 'production') {
         await this.createIndexes();
       }
@@ -61,25 +52,17 @@ export class DatabaseManager {
   setupEventListeners() {
     const db = mongoose.connection;
 
-    db.on('connected', () => {
-      logger.info('Mongoose connected to MongoDB');
-    });
-
-    db.on('error', (error) => {
-      logger.error('Mongoose connection error', { error: error.message });
-    });
-
+    db.on('connected', () => logger.info('Mongoose connected'));
+    db.on('error', err => logger.error('Mongoose error', { err }));
     db.on('disconnected', () => {
-      logger.warn('Mongoose disconnected from MongoDB');
       this.isConnected = false;
+      logger.warn('Mongoose disconnected');
     });
-
     db.on('reconnected', () => {
-      logger.info('Mongoose reconnected to MongoDB');
       this.isConnected = true;
+      logger.info('Mongoose reconnected');
     });
 
-    // Graceful shutdown
     process.on('SIGINT', async () => {
       await this.disconnect();
       process.exit(0);
@@ -87,320 +70,235 @@ export class DatabaseManager {
   }
 
   async disconnect() {
-    try {
-      await mongoose.connection.close();
-      this.isConnected = false;
-      logger.info('Database connection closed');
-    } catch (error) {
-      logger.error('Error closing database connection', { error: error.message });
-    }
+    await mongoose.connection.close();
+    this.isConnected = false;
+    logger.info('Database connection closed');
   }
 
   async createIndexes() {
-    try {
-      logger.info('Creating database indexes...');
-
-      // User collection indexes
-      await this.createUserIndexes();
-      
-      // Product collection indexes
-      await this.createProductIndexes();
-      
-      // Order collection indexes
-      await this.createOrderIndexes();
-      
-      // Review collection indexes
-      await this.createReviewIndexes();
-      
-      // Address collection indexes
-      await this.createAddressIndexes();
-      
-      // Payment collection indexes
-      await this.createPaymentIndexes();
-      
-      // Wishlist collection indexes
-      await this.createWishlistIndexes();
-
-      logger.info('Database indexes created successfully');
-    } catch (error) {
-      logger.error('Error creating database indexes', { error: error.message });
-      throw error;
-    }
+    logger.info('Creating database indexes...');
+    await this.createUserIndexes();
+    await this.createProductIndexes();
+    await this.createOrderIndexes();
+    await this.createReviewIndexes();
+    await this.createAddressIndexes();
+    await this.createPaymentIndexes();
+    await this.createWishlistIndexes();
+    logger.info('Database indexes created successfully');
   }
+
+  /* ================= USER ================= */
 
   async createUserIndexes() {
     const User = mongoose.model('User');
-    
-    // Unique indexes
-    await User.collection.createIndex({ email: 1 }, { unique: true, background: true });
-    await User.collection.createIndex({ username: 1 }, { unique: true, background: true });
-    
-    // Query optimization indexes
-    await User.collection.createIndex({ role: 1 }, { background: true });
-    await User.collection.createIndex({ isActive: 1 }, { background: true });
-    await User.collection.createIndex({ createdAt: -1 }, { background: true });
-    await User.collection.createIndex({ lastLogin: -1 }, { background: true });
-    
-    // Compound indexes for common queries
+
+    await User.collection.createIndex({ email: 1 }, { unique: true });
+    await User.collection.createIndex({ username: 1 }, { unique: true });
+
+    await User.collection.createIndex({ role: 1 });
+    await User.collection.createIndex({ isActive: 1 });
+    await User.collection.createIndex({ createdAt: -1 });
+    await User.collection.createIndex({ lastLogin: -1 });
+
     await User.collection.createIndex(
-      { role: 1, isActive: 1, createdAt: -1 }, 
-      { background: true }
+      { role: 1, isActive: 1, createdAt: -1 }
     );
-    
-    // Partial indexes for specific conditions
+
     await User.collection.createIndex(
-      { lockUntil: 1 }, 
-      { 
-        background: true,
-        partialFilterExpression: { lockUntil: { $exists: true } }
-      }
+      { lockUntil: 1 },
+      { partialFilterExpression: { lockUntil: { $exists: true } } }
     );
-    
-    // Text search index
+
     await User.collection.createIndex(
-      { fullName: 'text', email: 'text', username: 'text' },
-      { background: true }
+      { fullName: 'text', email: 'text', username: 'text' }
     );
 
     logger.info('User indexes created');
   }
 
-async createProductIndexes() {
-  const Product = mongoose.model('Product');
+  /* ================= PRODUCT ================= */
 
-  // Single-field indexes
-  await Product.collection.createIndex({ Category: 1 }, { background: true });
-  await Product.collection.createIndex({ seller: 1 }, { background: true });
-  await Product.collection.createIndex({ isActive: 1 }, { background: true });
-  await Product.collection.createIndex({ price: 1 }, { background: true });
-  await Product.collection.createIndex({ rating: -1 }, { background: true });
-  await Product.collection.createIndex({ salesCount: -1 }, { background: true });
-  await Product.collection.createIndex({ createdAt: -1 }, { background: true });
+  async createProductIndexes() {
+    const Product = mongoose.model('Product');
 
-  // Compound indexes
-  await Product.collection.createIndex(
-    { Category: 1, isActive: 1, price: 1 },
-    { background: true }
-  );
+    await Product.collection.createIndex({ Category: 1 });
+    await Product.collection.createIndex({ seller: 1 });
+    await Product.collection.createIndex({ isActive: 1 });
+    await Product.collection.createIndex({ price: 1 });
+    await Product.collection.createIndex({ rating: -1 });
+    await Product.collection.createIndex({ salesCount: -1 });
+    await Product.collection.createIndex({ createdAt: -1 });
 
-  await Product.collection.createIndex(
-    { seller: 1, isActive: 1, createdAt: -1 },
-    { background: true }
-  );
+    await Product.collection.createIndex(
+      { Category: 1, isActive: 1, price: 1 }
+    );
 
-  await Product.collection.createIndex(
-    { isActive: 1, rating: -1, salesCount: -1 },
-    { background: true }
-  );
+    await Product.collection.createIndex(
+      { seller: 1, isActive: 1, createdAt: -1 }
+    );
 
-  // Text index
-  await Product.collection.createIndex(
-    {
-      name: 'text',
-      description: 'text',
-      tags: 'text',
-    
-    },
-    {
-      background: true,
-      weights: {
-        name: 10,
-        tags: 5,
-        description: 1
+    await Product.collection.createIndex(
+      { isActive: 1, rating: -1, salesCount: -1 }
+    );
+
+    await Product.collection.createIndex(
+      {
+        name: 'text',
+        description: 'text',
+        tags: 'text'
+      },
+      {
+        weights: {
+          name: 10,
+          tags: 5,
+          description: 1
+        }
       }
-    }
-  );
+    );
 
-  logger.info('Product indexes created');
-}
+    logger.info('Product indexes created');
+  }
 
-
+  /* ================= ORDER ================= */
 
   async createOrderIndexes() {
     const Order = mongoose.model('Order');
-    
-    // Query optimization indexes
-    await Order.collection.createIndex({ userId: 1 }, { background: true });
-    await Order.collection.createIndex({ status: 1 }, { background: true });
-    await Order.collection.createIndex({ paymentStatus: 1 }, { background: true });
-    await Order.collection.createIndex({ createdAt: -1 }, { background: true });
-    await Order.collection.createIndex({ orderNumber: 1 }, { unique: true, background: true });
-    
-    // Compound indexes for common queries
+
+    await Order.collection.createIndex({ userId: 1 });
+    await Order.collection.createIndex({ status: 1 });
+    await Order.collection.createIndex({ paymentStatus: 1 });
+    await Order.collection.createIndex({ createdAt: -1 });
+
+    // ✅ SAFE unique index
     await Order.collection.createIndex(
-      { userId: 1, status: 1, createdAt: -1 }, 
-      { background: true }
+      { orderNumber: 1 },
+      {
+        unique: true,
+        partialFilterExpression: {
+          orderNumber: { $type: 'string' }
+        }
+      }
     );
-    
+
     await Order.collection.createIndex(
-      { status: 1, createdAt: -1 }, 
-      { background: true }
+      { userId: 1, status: 1, createdAt: -1 }
     );
-    
+
     await Order.collection.createIndex(
-      { paymentStatus: 1, createdAt: -1 }, 
-      { background: true }
+      { status: 1, createdAt: -1 }
     );
-    
-    // Seller-specific indexes
+
     await Order.collection.createIndex(
-      { 'items.sellerId': 1, status: 1, createdAt: -1 }, 
-      { background: true }
+      { paymentStatus: 1, createdAt: -1 }
+    );
+
+    await Order.collection.createIndex(
+      { 'items.sellerId': 1, status: 1, createdAt: -1 }
     );
 
     logger.info('Order indexes created');
   }
 
+  /* ================= REVIEW ================= */
+
   async createReviewIndexes() {
     const Review = mongoose.model('Review');
-    
-    // Query optimization indexes
-    await Review.collection.createIndex({ productId: 1 }, { background: true });
-    await Review.collection.createIndex({ userId: 1 }, { background: true });
-    await Review.collection.createIndex({ rating: -1 }, { background: true });
-    await Review.collection.createIndex({ createdAt: -1 }, { background: true });
-    
-    // Compound indexes
+
+    await Review.collection.createIndex({ productId: 1 });
+    await Review.collection.createIndex({ userId: 1 });
+    await Review.collection.createIndex({ rating: -1 });
+    await Review.collection.createIndex({ createdAt: -1 });
+
     await Review.collection.createIndex(
-      { productId: 1, rating: -1, createdAt: -1 }, 
-      { background: true }
+      { productId: 1, rating: -1, createdAt: -1 }
     );
-    
+
     await Review.collection.createIndex(
-      { userId: 1, createdAt: -1 }, 
-      { background: true }
+      { userId: 1, createdAt: -1 }
     );
-    
-    // Unique constraint to prevent duplicate reviews
+
+    // ✅ SAFE unique constraint
     await Review.collection.createIndex(
-      { userId: 1, productId: 1 }, 
-      { unique: true, background: true }
+      { userId: 1, productId: 1 },
+      {
+        unique: true,
+        partialFilterExpression: {
+          userId: { $exists: true },
+          productId: { $exists: true }
+        }
+      }
     );
 
     logger.info('Review indexes created');
   }
 
+  /* ================= ADDRESS ================= */
+
   async createAddressIndexes() {
     const Address = mongoose.model('Address');
-    
-    // Query optimization indexes
-    await Address.collection.createIndex({ userId: 1 }, { background: true });
-    await Address.collection.createIndex({ isDefault: 1 }, { background: true });
-    await Address.collection.createIndex({ country: 1 }, { background: true });
-    await Address.collection.createIndex({ state: 1 }, { background: true });
-    
-    // Compound indexes
+
+    await Address.collection.createIndex({ userId: 1 });
+    await Address.collection.createIndex({ isDefault: 1 });
+    await Address.collection.createIndex({ country: 1 });
+    await Address.collection.createIndex({ state: 1 });
+
     await Address.collection.createIndex(
-      { userId: 1, isDefault: 1 }, 
-      { background: true }
+      { userId: 1, isDefault: 1 }
     );
 
     logger.info('Address indexes created');
   }
 
+  /* ================= PAYMENT ================= */
+
   async createPaymentIndexes() {
     const Payment = mongoose.model('Payment');
-    
-    // Query optimization indexes
-    await Payment.collection.createIndex({ userId: 1 }, { background: true });
-    await Payment.collection.createIndex({ orderId: 1 }, { background: true });
-    await Payment.collection.createIndex({ status: 1 }, { background: true });
-    await Payment.collection.createIndex({ paymentMethod: 1 }, { background: true });
-    await Payment.collection.createIndex({ createdAt: -1 }, { background: true });
-    
-    // Compound indexes
+
+    await Payment.collection.createIndex({ userId: 1 });
+    await Payment.collection.createIndex({ orderId: 1 });
+    await Payment.collection.createIndex({ status: 1 });
+    await Payment.collection.createIndex({ paymentMethod: 1 });
+    await Payment.collection.createIndex({ createdAt: -1 });
+
     await Payment.collection.createIndex(
-      { userId: 1, status: 1, createdAt: -1 }, 
-      { background: true }
+      { userId: 1, status: 1, createdAt: -1 }
     );
-    
+
     await Payment.collection.createIndex(
-      { orderId: 1, status: 1 }, 
-      { background: true }
+      { orderId: 1, status: 1 }
     );
 
     logger.info('Payment indexes created');
   }
 
-async createWishlistIndexes() {
-  const Wishlist = mongoose.model('Wishlist');
-  const existingIndexes = await Wishlist.collection.indexes();
+  /* ================= WISHLIST ================= */
 
-  const hasUserIdIndex = existingIndexes.some(
-    i => i.name === 'userId_1'
-  );
+  async createWishlistIndexes() {
+    const Wishlist = mongoose.model('Wishlist');
 
-  if (!hasUserIdIndex) {
     await Wishlist.collection.createIndex(
       { userId: 1 },
-      { unique: true, background: true }
+      {
+        unique: true,
+        partialFilterExpression: {
+          userId: { $exists: true }
+        }
+      }
     );
-  }
 
-  const hasCompoundIndex = existingIndexes.some(
-    i => i.name === 'userId_1_items.productId_1'
-  );
-
-  if (!hasCompoundIndex) {
     await Wishlist.collection.createIndex(
       { userId: 1, 'items.productId': 1 },
-      { unique: true, background: true }
+      {
+        unique: true,
+        partialFilterExpression: {
+          userId: { $exists: true },
+          'items.productId': { $exists: true }
+        }
+      }
     );
-  }
 
-  logger.info('Wishlist indexes created');
-}
-
-
-
-  // Database health check
-  async healthCheck() {
-    try {
-      const adminDb = mongoose.connection.db.admin();
-      const result = await adminDb.ping();
-      
-      const stats = await mongoose.connection.db.stats();
-      
-      return {
-        status: 'healthy',
-        connected: this.isConnected,
-        readyState: mongoose.connection.readyState,
-        host: mongoose.connection.host,
-        name: mongoose.connection.name,
-        collections: stats.collections,
-        dataSize: stats.dataSize,
-        indexSize: stats.indexSize,
-        ping: result
-      };
-    } catch (error) {
-      logger.error('Database health check failed', { error: error.message });
-      return {
-        status: 'unhealthy',
-        connected: false,
-        error: error.message
-      };
-    }
-  }
-
-  // Get database statistics
-  async getStats() {
-    try {
-      const stats = await mongoose.connection.db.stats();
-      const collections = await mongoose.connection.db.listCollections().toArray();
-      
-      return {
-        database: stats,
-        collections: collections.map(col => ({
-          name: col.name,
-          type: col.type
-        }))
-      };
-    } catch (error) {
-      logger.error('Error getting database stats', { error: error.message });
-      throw error;
-    }
+    logger.info('Wishlist indexes created');
   }
 }
 
-// Export singleton instance
 export default new DatabaseManager();
