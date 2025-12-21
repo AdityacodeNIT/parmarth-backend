@@ -109,6 +109,7 @@ const getAddress = asyncHandler(async (req, res) => {
 
 
 const getAllAddresses=asyncHandler(async(req,res)=>{
+        console.log(req.user._id)
         const alladresses=await Address.find({userId:req.user._id});
         if(!alladresses){
                 return res.

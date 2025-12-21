@@ -1,275 +1,276 @@
-import { authenticate, getHeaders, createOrder,checkServiceability } from "../utils/ShipRocket.js";
-import { Product } from "../models/product.models.js";
-import { Address } from "../models/address.models.js";
-import axios from "axios";
+import { authenticate, getHeaders, createOrder, checkServiceability } from '../utils/ShipRocket.js';
+import { Product } from '../models/product.models.js';
+import { Address } from '../models/address.models.js';
+import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
-import { asyncHandler } from "../utils/asyncHandler.js";
-import { ApiError } from "../utils/ApiError.js";
-import fs from "fs"
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { ApiError } from '../utils/ApiError.js';
 
-
-
-const generateSKU = (name) => {
-    return name.toLowerCase() // Convert to lowercase
-        .replace(/\s+/g, "_") // Replace spaces with underscores
-        .replace(/[^a-z0-9_]/g, "") // Remove special characters
-        .slice(0, 15) + "_" + Math.floor(1000 + Math.random() * 9000); // Add random 4-digit number
+const generateSKU = name => {
+  return (
+    name
+      .toLowerCase() // Convert to lowercase
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .replace(/[^a-z0-9_]/g, '') // Remove special characters
+      .slice(0, 15) +
+    '_' +
+    Math.floor(1000 + Math.random() * 9000)
+  ); // Add random 4-digit number
 };
 
-
 // Authentication
-authenticate().catch((err) => console.error(err.message));
+authenticate().catch(err => console.error(err.message));
 
 export const createOrderController = asyncHandler(async (req, res) => {
-    console.log("Request body received from frontend:", req.body);
+  console.log('Request body received from frontend:', req.body);
 
-        const { items,paymentMethod } = req.body;
-     
-        console.log("Items received for order creation:", items);
-    
-      
-        if (!items || items.length === 0) {
-            return res.status(400).json({ error: "No items provided" });
-        }
+  const { items, paymentMethod } = req.body;
 
-        const orders = [];
-        const groupedOrders = {};
+  console.log('Items received for order creation:', items);
 
-        for (const item of items) {
-            const { productId, quantity, Address_id } = item;
-            console.log("Payment method received from frontend:", paymentMethod);
+  if (!items || items.length === 0) {
+    return res.status(400).json({ error: 'No items provided' });
+  }
 
-            const product = await Product.findById(productId);
+  const orders = [];
+  const groupedOrders = {};
 
-            if (!product) {
-                throw new ApiError(404, `Product with ID ${productId} not found`);
-            }
+ // Cache to avoid redundant DB queries
+const addressCache = {};
 
-            await Product.updateOne(
-                { _id: productId },
-                [
-                  { $set: { bought: { $add: ["$bought", 1] } } } // Increment 'bought' by 1
-                ]
-              );
+// Step 1: Fetch all products in parallel
+const productIds = items.map(item => item.productId);
+const products = await Product.find({ _id: { $in: productIds } });
 
-            if (!groupedOrders[Address_id]) {
-                const address = await Address.findById(Address_id);
+// Step 2: Map products for quick lookup
+const productMap = new Map(products.map(product => [product._id.toString(), product]));
 
-                if (!address) {
-                    throw new ApiError(404, `Address with ID ${Address_id} not found`);
-                }
+// Step 3: Iterate items efficiently
+for (const item of items) {
+  const { productId, quantity, Address_id } = item;
 
-                const isAvailable = await checkServiceability(address.postalCode);
-            if (!isAvailable) {
-                throw new ApiError(400, `Delivery unavailable for pincode ${address.postalCode}`);
-            }
-            console.log(req.user?.email)
+  // Get product from cache
+  const product = productMap.get(productId.toString());
+  if (!product) {
+    throw new ApiError(404, `Product with ID ${productId} not found`);
+  }
 
-                groupedOrders[Address_id] = {
-                    order_id: uuidv4(),
-                    order_date: new Date().toISOString(),
+  // Increment bought count (fire-and-forget for performance)
+  Product.updateOne({ _id: productId }, { $inc: { bought: 1 } }).catch(err => {
+    console.error(`Failed to increment bought for ${productId}`, err);
+  });
 
-                    billing_customer_name: req.user?.username,
-                    billing_last_name: address.lastName,
-                    billing_address: address.streetAddress,
-                    billing_city: address.city,
-                    billing_pincode: address.postalCode,
-                    billing_state: address.state,
-                    billing_country: address.country,
-                    billing_email: req.user?.email,
-                    billing_phone: address.phoneNumber,
-                    shipping_is_billing: true,
+  // Fetch or reuse address
+  if (!addressCache[Address_id]) {
+    const address = await Address.findById(Address_id);
+    if (!address) throw new ApiError(404, `Address with ID ${Address_id} not found`);
 
-                    order_items: [],
-                    payment_method: paymentMethod,
-                    sub_total: 0,
-                    length: 10, // Default values for now
-                    breadth: 10,
-                    height: 10,
-                    weight: 1,
-                };
-            }
+    const isAvailable = await checkServiceability(address.postalCode);
+    if (!isAvailable) {
+      throw new ApiError(400, `Delivery unavailable for pincode ${address.postalCode}`);
+    }
 
-            groupedOrders[Address_id].order_items.push({
-                name: product.name,
-                sku: generateSKU(product.name),
-                units: quantity,
-                selling_price: product.price,
-                discount: 0,
-                tax: product.price * 0.18,
-            });
+    addressCache[Address_id] = address;
 
-            groupedOrders[Address_id].sub_total += product.price * quantity;
-        }
-        // console.log("Grouped Orders:", groupedOrders);
-      
+    // Initialize group entry
+    groupedOrders[Address_id] = {
+      order_id: uuidv4(),
+      order_date: new Date().toISOString(),
+      billing_customer_name: req.user?.username,
+      billing_last_name: address.lastName,
+      billing_address: address.streetAddress,
+      billing_city: address.city,
+      billing_pincode: address.postalCode,
+      billing_state: address.state,
+      billing_country: address.country,
+      billing_email: req.user?.email,
+      billing_phone: address.phoneNumber,
+      shipping_is_billing: true,
+      order_items: [],
+      payment_method: paymentMethod,
+      sub_total: 0,
+      length: 10,
+      breadth: 10,
+      height: 10,
+      weight: 1
+    };
+  }
 
-        const result = await createOrder(groupedOrders);
+  // Step 4: Add item to grouped order
+  groupedOrders[Address_id].order_items.push({
+    name: product.name,
+    sku: generateSKU(product.name),
+    units: quantity,
+    selling_price: product.price,
+    discount: 0,
+    tax: product.price * 0.18
+  });
 
+  groupedOrders[Address_id].sub_total += product.price * quantity;
+}
 
+   console.log("Grouped Orders:", groupedOrders);
 
-        res.status(201).json({
-            data: result,
-            message: "Order created successfully",
-        });
-   
+  const result = await createOrder(groupedOrders);
+
+  res.status(201).json({
+    data: result,
+    message: 'Order created successfully'
+  });
 });
 
 export const getAllOrdersController = asyncHandler(async (req, res) => {
-    console.log("Fetching all orders for user:", req.user?.email);
-    if (!req.user) {
-        console.error('User not authenticated');
-        throw new ApiError(401, "User not authenticated");
-    }
-
-    const headers = await getHeaders();
-    let orders;
-
-    try {
-        const response = await axios.get(
-            "https://apiv2.shiprocket.in/v1/external/orders",
-            headers,
-        );
-        console.log("Response from Shiprocket:", response.data);
-
-        orders = response.data;
-        console.log(`Fetched ${orders.data.length} orders from Shiprocket`);
-    } catch (shiprocketError) {
-        console.error('Error fetching orders from Shiprocket:', shiprocketError);
-
-        if (shiprocketError.response) {
-            const statusCode = shiprocketError.response.status || 502;
-            console.log(shiprocketError.response.data);
-            const shiprocketMessage = shiprocketError.response.data.message || 'Error from Shiprocket API';
-
-            return res.status(statusCode).json({
-                success: false,
-                error: `Shiprocket API error: ${shiprocketMessage}`,
-            });
-        } else if (shiprocketError.request) {
-            return res.status(504).json({
-                success: false,
-                error: 'No response from Shiprocket API (Gateway Timeout)',
-            });
-        } else {
-            return res.status(500).json({
-                success: false,
-                error: `Error communicating with Shiprocket API: ${shiprocketError.message}`,
-            });
-        }
-    }
-
-    if (!orders.data || !Array.isArray(orders.data)) {
-        return res.status(500).json({
-            success: false,
-            error: 'Invalid response from Shiprocket API',
-        });
-    }
-
-
-    // Role-based filtering
-    console.log("User role:", req.user.role);
+  console.log('Fetching all orders for user:', req.user?.email);
   
+  if (!req.user) {
+    console.error('User not authenticated');
+    throw new ApiError(401, 'User not authenticated');
+  }
+
+  const headers = await getHeaders();
+  console.log('Using headers:', headers);
+  let orders;
+
+  try {
+    console.log('Fetching orders from Shiprocket...',req.user.role);
+    // --- Added: Role-based URL selection ---
+    let url = 'https://apiv2.shiprocket.in/v1/external/orders';
     if (req.user.role === 'customer') {
-        const filteredOrders = orders.data.filter(order => {
-              console.log("User email:", order.customer_email);
-            return order.customer_email === req.user?.email;
-        });
-
-
-    
-        orders.data = filteredOrders;
-    } else {
-        console.log("Admin user detected. Returning all orders...");
+      // Add email as filter for customer role
+      url += `?email=${encodeURIComponent(req.user.email)}`;
+      console.log(`Customer detected. Fetching orders for: ${req.user.email}`);
     }
 
-    return res.status(200).json({
-        success: true,
-        data: orders,
-        message: "Orders fetched successfully",
+    const response = await axios.get(url, headers);
+   
+
+    orders = response.data;
+    console.log(`Fetched ${orders.data?.length || 0} orders from Shiprocket`);
+  } catch (shiprocketError) {
+    console.error('Error fetching orders from Shiprocket:', shiprocketError);
+
+    if (shiprocketError.response) {
+      const statusCode = shiprocketError.response.status || 502;
+      console.log(shiprocketError.response.data);
+      const shiprocketMessage =
+        shiprocketError.response.data.message || 'Error from Shiprocket API';
+
+      return res.status(statusCode).json({
+        success: false,
+        error: `Shiprocket API error: ${shiprocketMessage}`
+      });
+    } else if (shiprocketError.request) {
+      return res.status(504).json({
+        success: false,
+        error: 'No response from Shiprocket API (Gateway Timeout)'
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        error: `Error communicating with Shiprocket API: ${shiprocketError.message}`
+      });
+    }
+  }
+
+  if (!orders.data || !Array.isArray(orders.data)) {
+    return res.status(500).json({
+      success: false,
+      error: 'Invalid response from Shiprocket API'
     });
+  }
+
+  // --- Keep role-based filtering as a safety net ---
+  if (req.user.role === 'customer') {
+    const filteredOrders = orders.data.filter(order => {
+      return order.customer_email === req.user?.email;
+    });
+    orders.data = filteredOrders;
+  } else {
+    console.log('Admin user detected. Returning all orders...');
+  }
+
+  return res.status(200).json({
+    success: true,
+    data: orders,
+    message: 'Orders fetched successfully'
+  });
 });
 
+
 export const getOrder = asyncHandler(async (req, res) => {
-    const headers = await getHeaders();
-    const id = req.params.id;
+  const headers = await getHeaders();
+  const id = req.params.id;
 
-    try {
-        const response = await axios.get(
-            `https://apiv2.shiprocket.in/v1/external/orders/show/${id}`,
-            headers
-        );
+  try {
+    const response = await axios.get(
+      `https://apiv2.shiprocket.in/v1/external/orders/show/${id}`,
+      headers
+    );
 
-        res.status(200).json({
-            success: true,
-            data: response.data,
-            message: `Order ${id} fetched successfully`
-        });
+    res.status(200).json({
+      success: true,
+      data: response.data,
+      message: `Order ${id} fetched successfully`
+    });
+  } catch (err) {
+    console.error('Error fetching order:', err.message || err);
 
-    } catch (err) {
-        console.error("Error fetching order:", err.message || err);
-
-        if (err.response) {
-            const statusCode = err.response.status || 502;
-            const message = err.response.data?.message || "Shiprocket API responded with an error";
-            throw new ApiError(statusCode, message);
-        } else if (err.request) {
-            throw new ApiError(504, "No response from Shiprocket API (Gateway Timeout)");
-        } else {
-            throw new ApiError(500, `Shiprocket communication error: ${err.message}`);
-        }
+    if (err.response) {
+      const statusCode = err.response.status || 502;
+      const message = err.response.data?.message || 'Shiprocket API responded with an error';
+      throw new ApiError(statusCode, message);
+    } else if (err.request) {
+      throw new ApiError(504, 'No response from Shiprocket API (Gateway Timeout)');
+    } else {
+      throw new ApiError(500, `Shiprocket communication error: ${err.message}`);
     }
+  }
 });
 
 export const cancelOrder = asyncHandler(async (req, res) => {
-    const headers = await getHeaders(); // Must return valid Authorization headers
-    const orderId = req.params.id;
+  const headers = await getHeaders(); // Must return valid Authorization headers
+  const orderId = req.params.id;
 
-    if (!orderId) {
-        throw new ApiError(400, "Order ID is required for cancellation");
+  if (!orderId) {
+    throw new ApiError(400, 'Order ID is required for cancellation');
+  }
+
+  const payload = {
+    ids: [orderId] // Shiprocket expects an array of IDs
+  };
+
+  try {
+    const response = await axios.post(
+      'https://apiv2.shiprocket.in/v1/external/orders/cancel',
+      payload,
+      headers
+    );
+
+    res.status(200).json({
+      success: true,
+      data: response.data,
+      message: `Order ${orderId} cancelled successfully`
+    });
+  } catch (err) {
+    console.error('Error cancelling order:', err.message || err);
+
+    if (err.response) {
+      const statusCode = err.response.status || 502;
+      const message = err.response.data?.message || 'Shiprocket API responded with an error';
+      throw new ApiError(statusCode, message);
+    } else if (err.request) {
+      throw new ApiError(504, 'No response from Shiprocket API (Gateway Timeout)');
+    } else {
+      throw new ApiError(500, `Shiprocket communication error: ${err.message}`);
     }
-
-    const payload = {
-        ids: [orderId], // Shiprocket expects an array of IDs
-    };
-
-    try {
-        const response = await axios.post(
-            "https://apiv2.shiprocket.in/v1/external/orders/cancel",
-            payload,
-            headers
-        );
-
-        res.status(200).json({
-            success: true,
-            data: response.data,
-            message: `Order ${orderId} cancelled successfully`,
-        });
-
-    } catch (err) {
-        console.error("Error cancelling order:", err.message || err);
-
-        if (err.response) {
-            const statusCode = err.response.status || 502;
-            const message = err.response.data?.message || "Shiprocket API responded with an error";
-            throw new ApiError(statusCode, message);
-        } else if (err.request) {
-            throw new ApiError(504, "No response from Shiprocket API (Gateway Timeout)");
-        } else {
-            throw new ApiError(500, `Shiprocket communication error: ${err.message}`);
-        }
-    }
+  }
 });
-
-
-
-
 
 export const checkAvailabilityController = asyncHandler(async (req, res) => {
   const { pincode } = req.body;
 
   if (!pincode || pincode.length !== 6) {
-    throw new ApiError(400, "Valid 6-digit pincode is required");
+    throw new ApiError(400, 'Valid 6-digit pincode is required');
   }
 
   const result = await checkServiceability(pincode);
@@ -286,14 +287,11 @@ export const checkAvailabilityController = asyncHandler(async (req, res) => {
     success: true,
     data: {
       available: result.available,
-      eta: result.eta || "Not specified",
+      eta: result.eta || 'Not specified',
       cod: result.cod || false,
       deliveryCharge: bestCourier?.freight_charge ?? null,
       courierName: bestCourier?.courier_name ?? null,
-      estimatedDays: bestCourier?.estimated_delivery_days ?? null,
-    },
+      estimatedDays: bestCourier?.estimated_delivery_days ?? null
+    }
   });
 });
-
-
-

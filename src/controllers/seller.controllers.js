@@ -23,101 +23,139 @@ import Jwt from "jsonwebtoken";
                         }
                 };
                 
-                const registerSeller = asyncHandler(async (req, res) => {
-                        const { fullName, email, username, password, gstNumber } = req.body;
-                
-                        if (
-                                [fullName, email, username, password, gstNumber].some(
-                                        (field) => field?.trim() === "",
-                                )
-                        ) {
-                                throw new ApiError(400, "All fields are required");
-                        }
-                
-                        const existedUser = await Seller.findOne({
-                                $or: [{ username }, { email }],
-                        });
-                
-                        if (existedUser) {
-                                throw new ApiError(
-                                        409,
-                                        "User with email or username already exists",
-                                );
-                        }
-                
-                        const avatarlocalPath = req.files?.avatar?.[0]?.path;
-                        let coverImageLocalPath;
-                
-                        if (
-                                req.files &&
-                                Array.isArray(req.files.coverImage) &&
-                                req.files.coverImage.length > 0
-                        ) {
-                                coverImageLocalPath = req.files.coverImage[0]?.path;
-                        }
-                
-                        if (!avatarlocalPath) {
-                                throw new ApiError(400, "Avatar file is required");
-                        }
-                
-                        let avatar;
-                        try {
-                                avatar = await uploadOnCloudinary(avatarlocalPath);
-                        } catch (error) {
-                                console.error("Error uploading avatar:", error);
-                                throw new ApiError(500, "Error uploading avatar");
-                        }
-                
-                        let coverImage;
-                        if (coverImageLocalPath) {
-                                try {
-                                        coverImage =
-                                                await uploadOnCloudinary(coverImageLocalPath);
-                                } catch (error) {
-                                        console.error("Error uploading cover image:", error);
-                                        throw new ApiError(500, "Error uploading cover image");
-                                }
-                        }
-                
-                        let user;
-                        try {
-                                user = await Seller.create({
-                                        fullName,
-                                        avatar: avatar.url,
-                                        coverImage: coverImage?.url || "",
-                                        email,
-                                        password,
-                                        gstNumber,
-                                        username: username.toLowerCase(),
-                                        approved: false,
-                                });
-                        } catch (error) {
-                                console.error("Error creating user in DB:", error);
-                                throw new ApiError(500, "Error creating user in database");
-                        }
-                
-                        const createdUser = await Seller.findById(user._id).select(
-                                "-password -refreshSessionToken",
-                        );
-                
-                        if (!createdUser) {
-                                throw new ApiError(
-                                        500,
-                                        "User created but could not be retrieved",
-                                );
-                        }
-                
-                        return res
-                                .status(201)
-                                .json(
-                                        new ApiResponse(
-                                                200,
-                                                createdUser,
-                                                "Registered successfully",
-                                        ),
-                                );
-                });
-                
+             const registerSeller = asyncHandler(async (req, res) => {
+  const {
+    fullName,
+    email,
+    username,
+    password,
+    gstNumber,
+    panNumber,
+    businessName,
+    businessType,
+    businessAddress,
+    pincode,
+    contactNumber,
+    accountHolderName,
+    accountNumber,
+    ifscCode,
+    bankName,
+  } = req.body;
+
+  // 🔹 1. Validate all required fields
+  if (
+    [
+      fullName,
+      email,
+      username,
+      password,
+      gstNumber,
+      panNumber,
+      businessName,
+      businessType,
+      businessAddress,
+      pincode,
+      contactNumber,
+      accountHolderName,
+      accountNumber,
+      ifscCode,
+      bankName,
+    ].some((field) => !field?.trim?.())
+  ) {
+    throw new ApiError(400, "All fields are required");
+  }
+
+  // 🔹 2. Check for existing seller by username or email
+  const existedUser = await Seller.findOne({
+    $or: [{ username }, { email }],
+  });
+
+  if (existedUser) {
+    throw new ApiError(409, "User with email or username already exists");
+  }
+
+  // 🔹 3. Handle image uploads
+  const avatarlocalPath = req.files?.avatar?.[0]?.path;
+  let coverImageLocalPath;
+
+  if (
+    req.files &&
+    Array.isArray(req.files.coverImage) &&
+    req.files.coverImage.length > 0
+  ) {
+    coverImageLocalPath = req.files.coverImage[0]?.path;
+  }
+
+  if (!avatarlocalPath) {
+    throw new ApiError(400, "Avatar file is required");
+  }
+
+  // 🔹 4. Upload to Cloudinary
+  let avatar;
+  try {
+    avatar = await uploadOnCloudinary(avatarlocalPath);
+  } catch (error) {
+    console.error("Error uploading avatar:", error);
+    throw new ApiError(500, "Error uploading avatar");
+  }
+
+  let coverImage;
+  if (coverImageLocalPath) {
+    try {
+      coverImage = await uploadOnCloudinary(coverImageLocalPath);
+    } catch (error) {
+      console.error("Error uploading cover image:", error);
+      throw new ApiError(500, "Error uploading cover image");
+    }
+  }
+
+  // 🔹 5. Create seller in DB
+  let seller;
+  try {
+    seller = await Seller.create({
+      fullName,
+      email,
+      username: username.toLowerCase(),
+      password,
+      gstNumber,
+      panNumber,
+      businessName,
+      businessType,
+      businessAddress,
+      pincode,
+      contactNumber,
+      accountHolderName,
+      accountNumber,
+      ifscCode,
+      bankName,
+      avatar: avatar.url,
+      coverImage: coverImage?.url || "",
+      approved: false, // default until admin approves
+    });
+  } catch (error) {
+    console.error("Error creating seller in DB:", error);
+    throw new ApiError(500, "Error creating user in database");
+  }
+
+  // 🔹 6. Remove sensitive fields before sending response
+  const createdSeller = await Seller.findById(seller._id).select(
+    "-password -refreshSessionToken"
+  );
+
+  if (!createdSeller) {
+    throw new ApiError(500, "User created but could not be retrieved");
+  }
+
+  // 🔹 7. Send final response
+  return res.status(201).json(
+    new ApiResponse(
+      200,
+      createdSeller,
+      "Registered successfully. Awaiting admin approval."
+    )
+  );
+});
+
                 const loginSeller = asyncHandler(async (req, res) => {
                         const { email, username, password } = req.body;
                 
@@ -166,6 +204,7 @@ import Jwt from "jsonwebtoken";
                                         ),
                                 );
                 });
+
                 
                 const refreshAccessSessionToken = asyncHandler(async (req, res) => {
                         const incomingRefreshSessionToken = req.cookies.refreshSessionToken;
@@ -353,6 +392,50 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
                         ),
                 );
 });
+
+
+const getSellerDashboard = asyncHandler(async (req, res) => {
+  const sellerId = req.seller?._id;
+
+  if (!sellerId) {
+    throw new ApiError(401, "Unauthorized — seller not logged in");
+  }
+
+  // ✅ Fetch data in parallel
+  const [productCount, orderStats] = await Promise.all([
+    Product.countDocuments({ seller: sellerId }),
+    Order.aggregate([
+      { $match: { seller: sellerId } },
+      {
+        $group: {
+          _id: null,
+          totalOrders: { $sum: 1 },
+          totalEarnings: { $sum: "$totalAmount" },
+          pendingOrders: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "Pending"] }, 1, 0],
+            },
+          },
+        },
+      },
+    ]),
+  ]);
+
+  const stats =
+    orderStats.length > 0
+      ? orderStats[0]
+      : { totalOrders: 0, totalEarnings: 0, pendingOrders: 0 };
+
+  return res.status(200).json(
+    new ApiResponse(200, {
+      productCount,
+      totalOrders: stats.totalOrders,
+      totalEarnings: stats.totalEarnings,
+      pendingOrders: stats.pendingOrders,
+    }, "Seller dashboard data fetched successfully")
+  );
+});
+
 export {
         registerSeller,
         loginSeller,
@@ -362,4 +445,5 @@ export {
         changePassword,
         updateAccountdetail,
         updateUserAvatar,
+        getSellerDashboard
 };

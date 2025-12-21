@@ -44,6 +44,7 @@ const isTokenExpired = (token) => {
 export const getHeaders = async () => {
 
         const token = await getAuthToken();
+        console.log("Using Shiprocket Token:", token);
 
         return {
                 headers: {
@@ -62,7 +63,7 @@ export const createOrder = async (orders) => {
                 try {
                         
                             const response = await axios.post(
-                                `${process.env.SHIPROCKET_API_BASE}/orders/create/adhoc`,
+                                `https://apiv2.shiprocket.in/v1/external/orders/create/adhoc`,
                                 orderData,
                                 await getHeaders()
                             );

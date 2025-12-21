@@ -2,17 +2,13 @@ import { Router } from "express";
 import { upload } from "../middlewares/multer.middleware.js";
 import {
         addProduct,
-        WritingProduct,
-        ReusableProduct,
-        FillingProduct,
-        PaperProduct,
-        DeskSupplies,
-        getTrendingProduct,
-        getProduct,
+        getProducts,
         searchresult,
         deleteProduct,
         updateProduct,
         getSellerProduct,
+        getTrendingProduct,
+        getProductById,
 } from "../controllers/product.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { verifyRole } from "../middlewares/role.middleware.js";
@@ -44,14 +40,13 @@ router.delete(
 router.route("/manageProduct").get(verifyJWT,verifyRole(["seller","superadmin"]),getSellerProduct);
 
 
-
-router.route("/WritingProduct").get(WritingProduct);
-router.route("/PaperProduct").get(PaperProduct);
-router.route("/ReusableProduct").get(ReusableProduct);
-router.route("/FillingProduct").get(FillingProduct);
-router.route("/DeskSupplies").get(DeskSupplies);
-router.route("/getProduct").get(getProduct);
+router.route("/").get(getProducts);
 router.route("/getTrendingProduct").get(getTrendingProduct);
+
+router.route("/:id").get(getProductById);
+
+
+
 
 router.route("/searchProduct").post(searchresult);
 

@@ -10,4 +10,6 @@ const UserInteractionSchema = new Schema(
 }
 );
 
-export const UserInteraction = mongoose.model("UserInteraction", UserInteractionSchema);
+export const UserInteraction =
+  mongoose.models.UserInteraction || mongoose.model('UserInteraction', UserInteractionSchema);
+

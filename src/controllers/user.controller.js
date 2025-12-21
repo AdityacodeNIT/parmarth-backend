@@ -28,6 +28,7 @@ const generateAccessAndRefreshToken = async (userId) => {
 // registering user (no OTP)
 const registerUser = asyncHandler(async (req, res) => {
     const { fullName, email, username, password } = req.body;
+    console.log("registration request", req.body);
 
     if ([fullName, email, username, password].some(field => field?.trim() === "")) {
         throw new ApiError(400, "All fields are required");

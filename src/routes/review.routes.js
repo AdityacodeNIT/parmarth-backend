@@ -5,7 +5,7 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const Reviewrouter = Router();
 
-Reviewrouter.route("/addreview").post(verifyJWT,addReview);
+Reviewrouter.route("/").post(verifyJWT,addReview);
 
 // Add JWT verification middleware to the addReview route
 

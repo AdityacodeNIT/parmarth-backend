@@ -8,7 +8,7 @@ import { Router } from "express";
 //         updateUserAvatar,
 //         changePassword,
 // } from "../controllers/user.controller.js";
-import { registerSeller,loginSeller,logOutUser,updateAccountdetail,updateUserAvatar,changePassword,refreshAccessSessionToken } from "../controllers/seller.controllers.js";
+import { registerSeller,loginSeller,logOutUser,updateAccountdetail,updateUserAvatar,changePassword,refreshAccessSessionToken, getSellerDashboard } from "../controllers/seller.controllers.js";
 import { upload } from "../middlewares/multer.middleware.js";
 
 import { isSellerAutenticated ,verifySeller } from "../middlewares/auth.middleware.js";
@@ -43,5 +43,7 @@ sellerRouter.route("/changePassword").post(verifySeller, changePassword);
 // Secured Routes
 
 sellerRouter.route("/sellerRefresh-token").post(verifySeller, refreshAccessSessionToken);
+
+sellerRouter.route("/dashboard").get(verifySeller,getSellerDashboard);
 export default sellerRouter;
 

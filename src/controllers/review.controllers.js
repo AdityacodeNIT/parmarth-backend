@@ -2,7 +2,9 @@ import { ObjectId } from "mongodb"; // Ensure ObjectId is imported
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Review } from "../models/review.models.js";
+import {Product} from "../models/product.models.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import mongoose from "mongoose";
 
 const addReview = asyncHandler(async (req, res) => {
     const { productId, rating, message } = req.body;
@@ -13,13 +15,54 @@ const addReview = asyncHandler(async (req, res) => {
     }
     const existingReview = await Review.findOne({ userId, productId });
 
-    if (existingReview) {
-        throw new ApiError(400, "You have already reviewed this product");
-    }
-    const newReview = await Review.create({ userId, productId, rating, message });
+   if (existingReview) {
+  return res.status(400).json({
+    success: false,
+    message: 'You have already reviewed this product'
+  });
+}
 
-    res.status(201).json(new ApiResponse(201, newReview, "Review added successfully"));
+  // 1️⃣ Create review
+  const newReview = await Review.create({
+    userId,
+    productId,
+    rating,
+    message
+  });
+
+  // 2️⃣ Recalculate average rating
+  const stats = await Review.aggregate([
+    {
+      $match: {
+        productId: new mongoose.Types.ObjectId(productId)
+      }
+    },
+    {
+      $group: {
+        _id: "$productId",
+        avgRating: { $avg: "$rating" },
+        reviewCount: { $sum: 1 }
+      }
+    }
+  ]);
+
+  const avgRating = stats[0]?.avgRating || 0;
+  const reviewCount = stats[0]?.reviewCount || 0;
+
+  // 3️⃣ Persist rating into Product
+  const updatedProduct=await Product.findByIdAndUpdate(productId, {
+    rating: avgRating,
+    reviewCount
+    
+  },
+  { new: true });
+  console.log("updatedProduct",updatedProduct)
+
+  res
+    .status(201)
+    .json(new ApiResponse(201, newReview, "Review added successfully"));
 });
+
    
    
 const averageReview = asyncHandler(async (req, res) => {

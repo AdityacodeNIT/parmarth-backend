@@ -3,7 +3,7 @@ import { Router } from "express";
 import {
         wishlistedItems,
         retrieveWishlisted,
-        removeWishlistedItem,
+       removeWishlistedItem,
 } from "../controllers/wishlist.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
