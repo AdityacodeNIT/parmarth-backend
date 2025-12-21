@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import logger from '../utils/logger.js';
 
-// Database configuration and optimization
 export class DatabaseManager {
   constructor() {
     this.connection = null;
@@ -35,8 +34,7 @@ export class DatabaseManager {
 
       logger.info('Database connected successfully', {
         host: this.connection.connection.host,
-        name: this.connection.connection.name,
-        readyState: this.connection.connection.readyState
+        name: this.connection.connection.name
       });
 
       return this.connection;
@@ -53,15 +51,9 @@ export class DatabaseManager {
     const db = mongoose.connection;
 
     db.on('connected', () => logger.info('Mongoose connected'));
-    db.on('error', err => logger.error('Mongoose error', { err }));
-    db.on('disconnected', () => {
-      this.isConnected = false;
-      logger.warn('Mongoose disconnected');
-    });
-    db.on('reconnected', () => {
-      this.isConnected = true;
-      logger.info('Mongoose reconnected');
-    });
+    db.on('error', err => logger.error('Mongoose error', err));
+    db.on('disconnected', () => logger.warn('Mongoose disconnected'));
+    db.on('reconnected', () => logger.info('Mongoose reconnected'));
 
     process.on('SIGINT', async () => {
       await this.disconnect();
@@ -98,11 +90,6 @@ export class DatabaseManager {
     await User.collection.createIndex({ role: 1 });
     await User.collection.createIndex({ isActive: 1 });
     await User.collection.createIndex({ createdAt: -1 });
-    await User.collection.createIndex({ lastLogin: -1 });
-
-    await User.collection.createIndex(
-      { role: 1, isActive: 1, createdAt: -1 }
-    );
 
     await User.collection.createIndex(
       { lockUntil: 1 },
@@ -142,11 +129,7 @@ export class DatabaseManager {
     );
 
     await Product.collection.createIndex(
-      {
-        name: 'text',
-        description: 'text',
-        tags: 'text'
-      },
+      { name: 'text', description: 'text', tags: 'text' },
       {
         weights: {
           name: 10,
@@ -169,7 +152,6 @@ export class DatabaseManager {
     await Order.collection.createIndex({ paymentStatus: 1 });
     await Order.collection.createIndex({ createdAt: -1 });
 
-    // ✅ SAFE unique index
     await Order.collection.createIndex(
       { orderNumber: 1 },
       {
@@ -178,22 +160,6 @@ export class DatabaseManager {
           orderNumber: { $type: 'string' }
         }
       }
-    );
-
-    await Order.collection.createIndex(
-      { userId: 1, status: 1, createdAt: -1 }
-    );
-
-    await Order.collection.createIndex(
-      { status: 1, createdAt: -1 }
-    );
-
-    await Order.collection.createIndex(
-      { paymentStatus: 1, createdAt: -1 }
-    );
-
-    await Order.collection.createIndex(
-      { 'items.sellerId': 1, status: 1, createdAt: -1 }
     );
 
     logger.info('Order indexes created');
@@ -207,17 +173,7 @@ export class DatabaseManager {
     await Review.collection.createIndex({ productId: 1 });
     await Review.collection.createIndex({ userId: 1 });
     await Review.collection.createIndex({ rating: -1 });
-    await Review.collection.createIndex({ createdAt: -1 });
 
-    await Review.collection.createIndex(
-      { productId: 1, rating: -1, createdAt: -1 }
-    );
-
-    await Review.collection.createIndex(
-      { userId: 1, createdAt: -1 }
-    );
-
-    // ✅ SAFE unique constraint
     await Review.collection.createIndex(
       { userId: 1, productId: 1 },
       {
@@ -239,12 +195,6 @@ export class DatabaseManager {
 
     await Address.collection.createIndex({ userId: 1 });
     await Address.collection.createIndex({ isDefault: 1 });
-    await Address.collection.createIndex({ country: 1 });
-    await Address.collection.createIndex({ state: 1 });
-
-    await Address.collection.createIndex(
-      { userId: 1, isDefault: 1 }
-    );
 
     logger.info('Address indexes created');
   }
@@ -257,16 +207,6 @@ export class DatabaseManager {
     await Payment.collection.createIndex({ userId: 1 });
     await Payment.collection.createIndex({ orderId: 1 });
     await Payment.collection.createIndex({ status: 1 });
-    await Payment.collection.createIndex({ paymentMethod: 1 });
-    await Payment.collection.createIndex({ createdAt: -1 });
-
-    await Payment.collection.createIndex(
-      { userId: 1, status: 1, createdAt: -1 }
-    );
-
-    await Payment.collection.createIndex(
-      { orderId: 1, status: 1 }
-    );
 
     logger.info('Payment indexes created');
   }
@@ -280,9 +220,7 @@ export class DatabaseManager {
       { userId: 1 },
       {
         unique: true,
-        partialFilterExpression: {
-          userId: { $exists: true }
-        }
+        partialFilterExpression: { userId: { $exists: true } }
       }
     );
 
