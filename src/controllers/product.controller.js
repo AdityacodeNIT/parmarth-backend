@@ -108,8 +108,7 @@ const getProducts = asyncHandler(async (req, res) => {
     if (category) {
   filter.Category = category;
 }
-
-    const products = await Product.find(filter);
+    const products = await Product.find(filter).select("name price ProductImage rating reviewCount Category").lean();
 
     res.status(200).json(products);
   } catch (error) {
@@ -127,7 +126,7 @@ const getProductById = asyncHandler(async (req, res) => {
 
   console.log('Product ID:', id);
 
-  const product = await Product.findById(id);
+  const product = await Product.findById(id).lean();
 
   console.log('Product:', product);
 
@@ -137,7 +136,6 @@ const getProductById = asyncHandler(async (req, res) => {
 
   res.status(200).json(product);
 });
-
 
 const getTrendingProduct = asyncHandler(async (req, res) => {
   const products = await Product.aggregate(
@@ -150,7 +148,6 @@ const getTrendingProduct = asyncHandler(async (req, res) => {
     res.json(products);
   }
 });
-
 
 
 const updateProduct = asyncHandler(async (req, res) => {
