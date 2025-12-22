@@ -66,26 +66,46 @@ const addReview = asyncHandler(async (req, res) => {
    
    
 const averageReview = asyncHandler(async (req, res) => {
-        const { productId } = req.body;
-        const objectId = new ObjectId(productId);
-    
-         const result = await Review.aggregate([
-                {
-                        $match: { productId: objectId },
-                },
-                {
-                        $group: {
-                                _id: "$productId",
-                                averageRating: { $avg: "$rating" },
-                                count: { $sum: 1 },
-                        },
-                },
-        ]);
-        // Return the average rating and the total count
-        const averageRating = result.length > 0 ? result[0].averageRating : 0;
-        const count = result.length > 0 ? result[0].count : 0;
-        return res.json({ averageRating, count });
+  try {
+    const { productId } = req.body;
+
+    // Basic validation
+    if (!productId) {
+      return res.status(400).json({ message: "productId is required" });
+    }
+
+    const objectId = new ObjectId(productId);
+
+    const result = await Review.aggregate([
+      {
+        $match: { productId: objectId },
+      },
+      {
+        $group: {
+          _id: "$productId",
+          averageRating: { $avg: "$rating" },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const averageRating =
+      result.length > 0 ? result[0].averageRating : 0;
+
+    const count =
+      result.length > 0 ? result[0].count : 0;
+
+    return res.status(200).json({ averageRating, count });
+
+  } catch (error) {
+    console.error("Average review error:", error);
+
+    return res.status(500).json({
+      message: "Failed to calculate average review",
+    });
+  }
 });
+
 
 const getReview = asyncHandler(async (req, res) => {
         const id  = req.params.id;
