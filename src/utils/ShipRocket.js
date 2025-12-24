@@ -44,7 +44,6 @@ const isTokenExpired = (token) => {
 export const getHeaders = async () => {
 
         const token = await getAuthToken();
-        console.log("Using Shiprocket Token:", token);
 
         return {
                 headers: {

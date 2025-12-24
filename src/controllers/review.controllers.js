@@ -57,8 +57,7 @@ const addReview = asyncHandler(async (req, res) => {
       },
       { new: true }
     );
-    console.log('updatedProduct', updatedProduct);
-
+    
     res.status(201).json(new ApiResponse(201, newReview, 'Review added successfully'));
   } catch (error) {
     return res.status(500).json({

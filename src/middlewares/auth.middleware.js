@@ -16,13 +16,11 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
                 }
 
                 const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-                console.log('Decoded JWT token:', decodedToken);
 
                 // Get user and check if account is active
                 const user = await User.findById(decodedToken._id).select(
                         "-password -refreshToken -twoFactorSecret"
                 );
-                console.log('User fetched from DB:', user);
 
                 if (!user) {
                         throw new ApiError(401, "User not found");
@@ -37,7 +35,6 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
                 }
 
                 // Attach user and token info to request
-                console.log('Authenticated user:', user.email, 'Role:', user.role);
                 req.user = user;
                 req.token = token;
                 req.tokenPayload = decodedToken;
@@ -97,7 +94,6 @@ export const verifySeller = asyncHandler(async (req, _, next) => {
                 const seller = await Seller.findById(decodedToken._id).select(
                         "-password -refreshToken",
                 );
-                console.log(seller)
 
                 if (!seller) {
                         throw new ApiError(401, "Invalid Access Token");

@@ -28,7 +28,6 @@ const generateAccessAndRefreshToken = async (userId) => {
 // registering user (no OTP)
 const registerUser = asyncHandler(async (req, res) => {
     const { fullName, email, username, password } = req.body;
-    console.log("registration request", req.body);
 
     if ([fullName, email, username, password].some(field => field?.trim() === "")) {
         throw new ApiError(400, "All fields are required");
@@ -255,16 +254,25 @@ const changePassword = asyncHandler(async (req, res) => {
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
-    return res
-        .status(200)
-        .json(
-            new ApiResponse(
-                200,
-                req.user,
-                "current user fetched succesfully",
-            ),
-        );
+  const userId = req.user?._id; // set by auth middleware
+
+  if (!userId) {
+    throw new ApiError(401, "Unauthorized");
+  }
+
+  const user = await User.findById(userId).select(
+    "-password -refreshToken"
+  );
+
+  if (!user) {
+    throw new ApiError(401, "User not found");
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, user, "User fetched successfully")
+  );
 });
+
 
 const updateAccountdetail = asyncHandler(async (req, res) => {
     const { fullName, email } = req.body;

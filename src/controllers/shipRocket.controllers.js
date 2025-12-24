@@ -22,11 +22,8 @@ const generateSKU = name => {
 authenticate().catch(err => console.error(err.message));
 
 export const createOrderController = asyncHandler(async (req, res) => {
-  console.log('Request body received from frontend:', req.body);
 
   const { items, paymentMethod } = req.body;
-
-  console.log('Items received for order creation:', items);
 
   if (!items || items.length === 0) {
     return res.status(400).json({ error: 'No items provided' });
@@ -109,8 +106,6 @@ for (const item of items) {
   groupedOrders[Address_id].sub_total += product.price * quantity;
 }
 
-   console.log("Grouped Orders:", groupedOrders);
-
   const result = await createOrder(groupedOrders);
 
   res.status(201).json({
@@ -120,7 +115,6 @@ for (const item of items) {
 });
 
 export const getAllOrdersController = asyncHandler(async (req, res) => {
-  console.log('Fetching all orders for user:', req.user?.email);
   
   if (!req.user) {
     console.error('User not authenticated');
@@ -128,30 +122,25 @@ export const getAllOrdersController = asyncHandler(async (req, res) => {
   }
 
   const headers = await getHeaders();
-  console.log('Using headers:', headers);
   let orders;
 
   try {
-    console.log('Fetching orders from Shiprocket...',req.user.role);
     // --- Added: Role-based URL selection ---
     let url = 'https://apiv2.shiprocket.in/v1/external/orders';
     if (req.user.role === 'customer') {
       // Add email as filter for customer role
       url += `?email=${encodeURIComponent(req.user.email)}`;
-      console.log(`Customer detected. Fetching orders for: ${req.user.email}`);
     }
 
     const response = await axios.get(url, headers);
    
 
     orders = response.data;
-    console.log(`Fetched ${orders.data?.length || 0} orders from Shiprocket`);
   } catch (shiprocketError) {
     console.error('Error fetching orders from Shiprocket:', shiprocketError);
 
     if (shiprocketError.response) {
       const statusCode = shiprocketError.response.status || 502;
-      console.log(shiprocketError.response.data);
       const shiprocketMessage =
         shiprocketError.response.data.message || 'Error from Shiprocket API';
 

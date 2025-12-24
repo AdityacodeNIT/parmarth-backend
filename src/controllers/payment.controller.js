@@ -16,8 +16,6 @@ const checkout = asyncHandler(async (req, res) => {
     const order = await razorpay.orders.create(options)
     ;
 
-    console.log(req.user)
-
     // ✅ Save new payment entry
     await Payment.create({
       razorpayOrderId: order.id,

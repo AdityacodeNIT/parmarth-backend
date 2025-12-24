@@ -102,7 +102,6 @@ const getProducts = asyncHandler(async (req, res) => {
   try {
     const { category } = req.query;
   
-    console.log("the category is",category)
     let filter = {};
  
     if (category) {
@@ -123,12 +122,7 @@ const getProducts = asyncHandler(async (req, res) => {
 const getProductById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-
-  console.log('Product ID:', id);
-
   const product = await Product.findById(id).lean();
-
-  console.log('Product:', product);
 
   if (!product) {
     return res.status(404).json({ message: "Product not found" });

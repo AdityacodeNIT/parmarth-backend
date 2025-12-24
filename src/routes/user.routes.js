@@ -7,6 +7,7 @@ import {
   updateAccountdetail,
   updateUserAvatar,
   changePassword,
+  getCurrentUser,
 } from "../controllers/user.controller.js";
 
 import {
@@ -44,6 +45,8 @@ router.route("/login").post(isAuthenticated, loginUser);
 
 // ✅ Logout
 router.route("/logout").post(verifyJWT, logOutUser);
+
+router.route("/me").get(verifyJWT,getCurrentUser);
 
 // ✅ Refresh token
 router.route("/refresh-token").post(refreshAccessToken);

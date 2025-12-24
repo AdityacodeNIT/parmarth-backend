@@ -30,12 +30,10 @@ export const saveUserInteraction = asyncHandler(async (req, res) => {
       userId: req.user._id,
       productId,
     });
-    console.log("Response from Python Model:", response.data);
+
   } catch (error) {
     console.error("Error training model:", error.message);
   }
-
-  console.log("User Interaction saved and model trained!",response.data);
 
   res.status(201).json({ message: "User interaction saved and model trained!" });
 });
