@@ -57,6 +57,7 @@ const orderlist = asyncHandler(async (req, res) => {
 
 // ─────────────────────────── Users List ───────────────────────────
 const userlist = asyncHandler(async (req, res) => {
+
   const users = await User.aggregate([
     {
       $project: {
@@ -90,10 +91,11 @@ const productList = asyncHandler(async (req, res) => {
 // ─────────────────────────── Delete User ───────────────────────────
 export const deleteUser = asyncHandler(async (req, res) => {
   const userId = req.params.id;
-  const userToDelete = await User.findById(userId);
 
-  if (!userToDelete) throw new ApiError(404, "User not found");
-  if (userToDelete.role === "superadmin")
+  const user = await User.findById(userId);
+
+  if (!user) throw new ApiError(404, "User not found");
+  if (user.role === "superadmin")
     throw new ApiError(403, "Cannot delete a superadmin");
 
   const deletedUser = await User.findByIdAndDelete(userId);

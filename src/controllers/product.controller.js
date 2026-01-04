@@ -7,58 +7,139 @@ import detectObjects from '../utils/detect.object.js';
 import fs from 'fs';
 
 const addProduct = asyncHandler(async (req, res) => {
-  const { name, price, description, Category, stocks, ...optionalFields } = req.body;
-
-  // Validate required fields
-  if (!name?.trim() || !price) {
-    throw new ApiError(400, 'Name and Price are required.');
-  }
-
-  // Check if product already exists
-  const existedProduct = await Product.findOne({ name });
-  if (existedProduct) {
-    throw new ApiError(409, 'Product already exists.');
-  }
-
-  // Check for product image from multer
-
-  const ProductImagelocalPath = req.file?.path;
-  if (!ProductImagelocalPath) {
-    throw new ApiError(400, 'Product image is required.');
-  }
-
-  // Upload image to Cloudinary
-  const uploadedImage = await uploadOnCloudinary(ProductImagelocalPath);
-  if (!uploadedImage) {
-    throw new ApiError(400, 'Failed to upload product image.');
-  }
-
-  // Prepare product object (Always include required fields)
-  const productData = {
+  const {
     name,
     price,
+    originalPrice,
     description,
     Category,
-    ProductImage: uploadedImage.url,
+    subcategory,
+    brand,
     stocks,
-    seller: req.user._id
+
+    ingredients,
+    allergens,
+    tags,
+
+    nutrition,
+    dietary,
+    foodInfo,
+
+    seoTitle,
+    seoDescription,
+    isFeatured,
+    attributes,
+  } = req.body;
+
+  /* ───────── Validation ───────── */
+  if (!name?.trim() || !price || !Category || stocks === undefined) {
+    throw new ApiError(400, "Name, price, category and stocks are required");
+  }
+
+  const exists = await Product.findOne({ name: name.trim() });
+  if (exists) {
+    throw new ApiError(409, "Product already exists");
+  }
+
+  /* ───────── Image Validation ───────── */
+  const mainImageFile = req.files?.productImage?.[0];
+  if (!mainImageFile?.path) {
+    throw new ApiError(400, "Primary product image is required");
+  }
+
+  /* ───────── Upload Primary Image ───────── */
+  const uploadedMainImage = await uploadOnCloudinary(mainImageFile.path);
+  if (!uploadedMainImage?.url) {
+    throw new ApiError(500, "Primary image upload failed");
+  }
+
+  /* ───────── Upload Gallery Images ───────── */
+  let galleryImages = [];
+  if (req.files?.images?.length) {
+    const uploads = await Promise.all(
+      req.files.images.map((file) => uploadOnCloudinary(file.path))
+    );
+
+    galleryImages = uploads
+      .filter((img) => img?.url)
+      .map((img) => img.url);
+  }
+
+  /* ───────── Helpers ───────── */
+  const parseJSON = (val) => {
+    try {
+      return typeof val === "string" ? JSON.parse(val) : val;
+    } catch {
+      return undefined;
+    }
   };
 
-  // Assign only the optional fields that exist in the request
-  Object.keys(optionalFields).forEach(key => {
-    if (optionalFields[key] !== undefined) {
-      productData[key] = optionalFields[key];
-    }
-  });
+  const normalizeArray = (val) =>
+    Array.isArray(val)
+      ? val
+      : typeof val === "string"
+      ? val.split(",").map((v) => v.trim()).filter(Boolean)
+      : [];
 
-  // Save product to database
+  /* ───────── Pricing Logic ───────── */
+  const basePrice = Number(price);
+  const baseOriginalPrice = originalPrice || basePrice;
+
+  const discount =
+    baseOriginalPrice > basePrice
+      ? Math.round(
+          ((baseOriginalPrice - basePrice) / baseOriginalPrice) * 100
+        )
+      : 0;
+
+  /* ───────── Product Object ───────── */
+  const productData = {
+    name: name.trim(),
+    price: basePrice,
+    originalPrice: baseOriginalPrice,
+    discount,
+
+    description,
+    Category,
+    subcategory,
+    brand,
+
+    stocks,
+
+    ProductImage: uploadedMainImage.url,
+    images: galleryImages,
+
+    seller: req.user._id,
+    sellerName: req.user.fullName,
+
+    ingredients: normalizeArray(ingredients),
+    allergens: normalizeArray(allergens),
+    tags: normalizeArray(tags),
+
+    nutrition: parseJSON(nutrition),
+    dietary: parseJSON(dietary),
+    foodInfo: parseJSON(foodInfo),
+
+    seoTitle,
+    seoDescription,
+    isFeatured: Boolean(isFeatured),
+
+    attributes: parseJSON(attributes),
+
+    priceHistory: [{ price: basePrice }],
+  };
+
   const product = await Product.create(productData);
 
-  return res.status(201).json(new ApiResponse(201, product, 'Product added successfully.'));
+  return res.status(201).json(
+    new ApiResponse(201, product, "Product added successfully")
+  );
 });
+
 
 const searchresult = asyncHandler(async (req, res) => {
   const { name } = req.body;
+    console.log(name);
 
   const result = await Product.aggregate([
     {
@@ -70,8 +151,10 @@ const searchresult = asyncHandler(async (req, res) => {
       }
     }
   ]);
+  console.log(result)
 
-  return res.json({ result });
+  return res.status(200)
+  .json(result );
 });
 
 export const searchByImage = async (req, res) => {
@@ -195,28 +278,30 @@ const updateProduct = asyncHandler(async (req, res) => {
 });
 
 const deleteProduct = asyncHandler(async (req, res) => {
-  try {
-    // Only allow sellers to delete their own products or admins to delete any product
-    if (req.user.role !== 'seller' && req.user.role !== 'superadmin') {
-      return res.status(403).json({ error: 'Permission denied' });
-    }
+  const { id } = req.params;
 
-    const { id } = req.params;
+  // Sellers can delete only their own products
+  const filter =
+    req.user.role === "seller"
+      ? { _id: id, seller: req.user._id }
+      : { _id: id };
 
-    // If the user is a seller, ensure they own the product
-    const filter = req.user.role === 'seller' ? { _id: id, seller: req.user._id } : { _id: id };
+  const product = await Product.findOneAndDelete(filter);
 
-    const product = await Product.findOneAndDelete(filter);
-
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found or unauthorized' });
-    }
-
-    res.json({ message: 'Product deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ error: 'Error deleting product' });
+  if (!product) {
+    return res.status(404).json({
+      success: false,
+      message: "Product not found or not authorized to delete",
+    });
   }
+
+  return res.status(200).json({
+    success: true,
+    deletedId: id,
+    message: "Product deleted successfully",
+  });
 });
+
 
 const getSellerProduct = asyncHandler(async (req, res) => {
   if (req.user.role !== 'seller' && req.user.role !== 'superadmin') {

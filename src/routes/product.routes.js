@@ -18,8 +18,8 @@ const router = Router();
 router.route("/addProduct").post(
         verifyJWT,
         verifyRole(["seller", "superadmin"]),
-        upload.single("ProductImage"),
-
+        upload.fields([{ name: "productImage", maxCount: 1 },
+    { name: "images", maxCount: 6 }]),
         addProduct,
 );
 
@@ -30,8 +30,7 @@ router.route("/updateProduct/:id").post(
         updateProduct,
 );
 
-router.delete(
-        "/deleteProduct/:id",
+router.route("/deleteProduct/:id").delete(
         verifyJWT,
         verifyRole(["seller", "superadmin"]),
         deleteProduct

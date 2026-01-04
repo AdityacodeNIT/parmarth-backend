@@ -44,7 +44,7 @@ router.route("/register").post(
 router.route("/login").post(isAuthenticated, loginUser);
 
 // ✅ Logout
-router.route("/logout").post(verifyJWT, logOutUser);
+router.route("/logout").post(logOutUser);
 
 router.route("/me").get(verifyJWT,getCurrentUser);
 

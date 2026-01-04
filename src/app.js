@@ -3,7 +3,6 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import logger from "./utils/logger.js";
-import { applySecurity } from "./middlewares/security.middleware.js";
 import { 
         generalRateLimit, 
         burstProtection 
@@ -24,21 +23,30 @@ import {
 
 const app = express();
 
+const onlyForReadRequests = (middleware) => {
+  return (req, res, next) => {
+    if (req.method === "GET" || req.method === "HEAD") {
+      return middleware(req, res, next);
+    }
+    next();
+  };
+};
+
 // Apply core middleware stack
 app.use(correlationId);
-app.use(requestTimeout(30000)); // 30 second timeout
+app.use(requestTimeout(50000)); // 30 second timeout
 app.use(requestLogger);
 app.use(monitorRequestSize);
 
-// Apply performance middleware
-app.use(intelligentCompression);
-app.use(responseOptimization);
-app.use(etagMiddleware);
-app.use(conditionalRequests);
-app.use(streamingResponse);
 
-// Apply security middleware stack
-app.use(applySecurity);
+
+app.use(onlyForReadRequests(intelligentCompression));
+app.use(onlyForReadRequests(responseOptimization));
+app.use(onlyForReadRequests(etagMiddleware));
+app.use(onlyForReadRequests(conditionalRequests));
+app.use(onlyForReadRequests(streamingResponse));
+
+
 
 // Apply rate limiting
 app.use(burstProtection);
@@ -68,6 +76,8 @@ app.use(
         })
 );
 
+app.options("*", cors());
+
 // Enhanced Helmet configuration
 app.use(helmet({
         contentSecurityPolicy: {
@@ -85,6 +95,7 @@ app.use(helmet({
         },
         crossOriginEmbedderPolicy: false // Disable for Razorpay compatibility
 }));
+
 
 // Body parsing with size limits
 app.use(express.json({ 
