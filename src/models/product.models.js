@@ -86,17 +86,98 @@ const ProductSchema = new Schema(
     },
 
     /* ───────── Nutrition (CRITICAL) ───────── */
-    nutrition: {
-      calories: Number,
-      protein: Number, // grams
-      carbs: Number,   // grams
-      sugar: Number,   // grams
-      fat: Number,     // grams
-      fibre: Number,  // grams
-      sodium: Number, // mg
+ nutrition: {
+  energy: {
+    calories: {
+      type: Number,
+      default: 0,
+    },
+  },
+
+  macros: {
+    protein: {
+      type: Number,
+      default: 0, // g
+    },
+    carbs: {
+      type: Number,
+      default: 0, // g
+    },
+    sugar: {
+      type: Number,
+      default: 0, // g (sub-carb)
+    },
+    fat: {
+      type: Number,
+      default: 0, // g
+    },
+    fibre: {
+      type: Number,
+      default: 0, // g
+    },
+  },
+
+  micros: {
+    vitamins: {
+      vitaminA: {
+        type: Number,
+        default: 0, // %
+      },
+      vitaminB12: {
+        type: Number,
+        default: 0, // %
+      },
+      vitaminC: {
+        type: Number,
+        default: 0, // %
+      },
+      vitaminD: {
+        type: Number,
+        default: 0, // %
+      },
+      vitaminE: {
+        type: Number,
+        default: 0, // %
+      },
+      vitaminK: {
+        type: Number,
+        default: 0, // %
+      },
     },
 
+    minerals: {
+      sodium: {
+        type: Number,
+        default: 0, // mg
+      },
+      calcium: {
+        type: Number,
+        default: 0, // %
+      },
+      iron: {
+        type: Number,
+        default: 0, // %
+      },
+      potassium: {
+        type: Number,
+        default: 0, // %
+      },
+      magnesium: {
+        type: Number,
+        default: 0, // %
+      },
+      zinc: {
+        type: Number,
+        default: 0, // %
+      },
+    },
+  },
+},
+
+
+
     /* ───────── Dietary Flags ───────── */
+
     dietary: {
       isVegan: Boolean,
       isVegetarian: Boolean,
@@ -107,19 +188,21 @@ const ProductSchema = new Schema(
     },
 
     /* ───────── Ingredients & Safety ───────── */
+
     ingredients: [String],
-    allergens: [String], // e.g. ["nuts", "soy", "dairy"]
+    allergens: [String], 
 
     /* ───────── Food Metadata ───────── */
     foodInfo: {
-      shelfLife: String,            // "6 months"
+      shelfLife: String,         
       expiryDate: Date,
-      storageInstructions: String,  // "Store in a cool, dry place"
-      servingSize: String,          // "30g"
+      storageInstructions: String, 
+      servingSize: String,
       servingsPerPack: Number,
     },
 
     /* ───────── Search & SEO ───────── */
+
     tags: [
       {
         type: String,
@@ -142,6 +225,7 @@ const ProductSchema = new Schema(
     },
 
     /* ───────── Ratings & Analytics ───────── */
+    
     rating: {
       type: Number,
       default: 0,
@@ -170,6 +254,15 @@ const ProductSchema = new Schema(
       default: 0,
       index: true,
     },
+
+    aiInsights: {
+  whyHealthy: {
+    text: String,
+    generatedAt: Date,
+    nutritionHash: String, // to detect changes
+  },
+},
+
 
     /* ───────── Seller ───────── */
     seller: {

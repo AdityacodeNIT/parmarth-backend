@@ -81,6 +81,8 @@ const addProduct = asyncHandler(async (req, res) => {
       ? val.split(",").map((v) => v.trim()).filter(Boolean)
       : [];
 
+  const num = (v) => (v === undefined || v === null ? 0 : Number(v));
+
   /* ───────── Pricing Logic ───────── */
   const basePrice = Number(price);
   const baseOriginalPrice = originalPrice || basePrice;
@@ -91,6 +93,42 @@ const addProduct = asyncHandler(async (req, res) => {
           ((baseOriginalPrice - basePrice) / baseOriginalPrice) * 100
         )
       : 0;
+
+  /* ───────── Nutrition Normalization (NEW) ───────── */
+  const rawNutrition = parseJSON(nutrition) || {};
+
+  const normalizedNutrition = {
+    energy: {
+      calories: num(rawNutrition?.energy?.calories),
+    },
+
+    macros: {
+      protein: num(rawNutrition?.macros?.protein),
+      carbs: num(rawNutrition?.macros?.carbs),
+      sugar: num(rawNutrition?.macros?.sugar),
+      fat: num(rawNutrition?.macros?.fat),
+      fibre: num(rawNutrition?.macros?.fibre),
+    },
+
+    micros: {
+      vitamins: {
+        vitaminA: num(rawNutrition?.micros?.vitamins?.vitaminA),
+        vitaminB12: num(rawNutrition?.micros?.vitamins?.vitaminB12),
+        vitaminC: num(rawNutrition?.micros?.vitamins?.vitaminC),
+        vitaminD: num(rawNutrition?.micros?.vitamins?.vitaminD),
+        vitaminE: num(rawNutrition?.micros?.vitamins?.vitaminE),
+        vitaminK: num(rawNutrition?.micros?.vitamins?.vitaminK),
+      },
+      minerals: {
+        sodium: num(rawNutrition?.micros?.minerals?.sodium),
+        calcium: num(rawNutrition?.micros?.minerals?.calcium),
+        iron: num(rawNutrition?.micros?.minerals?.iron),
+        potassium: num(rawNutrition?.micros?.minerals?.potassium),
+        magnesium: num(rawNutrition?.micros?.minerals?.magnesium),
+        zinc: num(rawNutrition?.micros?.minerals?.zinc),
+      },
+    },
+  };
 
   /* ───────── Product Object ───────── */
   const productData = {
@@ -116,7 +154,7 @@ const addProduct = asyncHandler(async (req, res) => {
     allergens: normalizeArray(allergens),
     tags: normalizeArray(tags),
 
-    nutrition: parseJSON(nutrition),
+    nutrition: normalizedNutrition,
     dietary: parseJSON(dietary),
     foodInfo: parseJSON(foodInfo),
 
@@ -135,6 +173,7 @@ const addProduct = asyncHandler(async (req, res) => {
     new ApiResponse(201, product, "Product added successfully")
   );
 });
+
 
 
 const searchresult = asyncHandler(async (req, res) => {

@@ -12,6 +12,7 @@ import {
 } from "../controllers/product.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { verifyRole } from "../middlewares/role.middleware.js";
+import { getWhyHealthyAI } from "../controllers/ai.controller.js";
 
 const router = Router();
 
@@ -37,6 +38,9 @@ router.route("/deleteProduct/:id").delete(
     );
 
 router.route("/manageProduct").get(verifyJWT,verifyRole(["seller","superadmin"]),getSellerProduct);
+
+
+router .route("/ai/whyHealthy/:productId").get(getWhyHealthyAI);
 
 
 router.route("/").get(getProducts);
