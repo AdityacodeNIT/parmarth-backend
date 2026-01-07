@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import logger from '../utils/logger.js';
-import { Product } from '../models/product.models.js';
+import { Product } from '../modules/product/product.models.js';
 import redisClient from '../config/redis.js';
 
 // Cart Item Schema

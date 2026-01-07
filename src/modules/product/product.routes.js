@@ -1,0 +1,58 @@
+import { Router } from "express";
+import { upload } from "../../middlewares/multer.middleware.js";
+import {
+        addProduct,
+        getProducts,
+        searchresult,
+        deleteProduct,
+        updateProduct,
+        getSellerProduct,
+        getTrendingProduct,
+        getProductById,
+} from "./product.controller.js";
+import { verifyJWT } from "../../middlewares/auth.middleware.js";
+import { verifyRole } from "../../middlewares/role.middleware.js";
+import { getWhyHealthyAI } from "../ai/ai.controller.js";
+
+const router = Router();
+
+
+router.route("/").get(getProducts);
+router.route("/").post(
+        verifyJWT,
+        verifyRole(["seller", "superadmin"]),
+        upload.fields([{ name: "productImage", maxCount: 1 },
+    { name: "images", maxCount: 6 }]),
+        addProduct,
+);
+
+router.route("/updateProduct/:id").post(
+        verifyJWT,
+        verifyRole(["seller", "superadmin"]),
+        upload.single("productImage"),
+        updateProduct,
+);
+
+router.route("/deleteProduct/:id").delete(
+        verifyJWT,
+        verifyRole(["seller", "superadmin"]),
+        deleteProduct
+    );
+
+router.route("/manageProduct").get(verifyJWT,verifyRole(["seller","superadmin"]),getSellerProduct);
+
+
+router .route("/ai/whyHealthy/:productId").get(getWhyHealthyAI);
+
+
+
+router.route("/getTrendingProduct").get(getTrendingProduct);
+
+router.route("/:id").get(getProductById);
+
+
+
+
+router.route("/searchProduct").post(searchresult);
+
+export default router;

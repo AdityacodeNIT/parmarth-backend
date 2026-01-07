@@ -1,8 +1,8 @@
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken";
-import { User } from "../models/user.model.js";
-import { Seller } from "../models/seller.model.js";
+import { User } from "../modules/user/user.model.js";
+import { Seller } from "../modules/seller/seller.model.js";
 
 import logger from "../utils/logger.js";
 
