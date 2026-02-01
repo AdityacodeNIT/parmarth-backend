@@ -75,11 +75,18 @@ npm run dev
 
 The API follows RESTful conventions and includes the following main endpoints:
 
-- `/api/v1/users` - User management
-- `/api/v1/products` - Product management
-- `/api/v1/orders` - Order management
-- `/api/v2/payments` - Payment processing
-- `/api/v2/wishlist` - Wishlist management
+- /api/v1/users – User management
+- /api/v1/seller – Seller management
+- /api/v1/products – Product management
+- /api/v1/cart – Cart management
+- /api/v1/wishlist – Wishlist management
+- /api/v1/address – Address management
+- /api/v1/orders – Order management
+- /api/v1/payment – Payment processing
+- /api/v1/review – Product reviews
+- /api/v1/subscribe – Subscriptions & notifications
+- /api/v1/shiprocket – Shipping & logistics integration
+- /api/v1 – Health check & infrastructure routes
 
 ## Environment Variables
 
@@ -89,13 +96,19 @@ Required environment variables:
 NODE_ENV=development
 PORT=8000
 MONGODB_URI=mongodb://localhost:27017/adyog_ecommerce
-JWT_SECRET=your-jwt-secret
+CORS_ORIGIN=your_Frotned_link
+ACCESS_TOKEN_SECRET=
+ACCESS_TOKEN_EXPIRY=
 REFRESH_TOKEN_SECRET=your-refresh-token-secret
+REFRESH_TOKEN_EXPIRY=
+EMAIL=
+EMAIL_PASS=
 CLOUDINARY_CLOUD_NAME=your-cloudinary-name
 CLOUDINARY_API_KEY=your-cloudinary-key
 CLOUDINARY_API_SECRET=your-cloudinary-secret
 RAZORPAY_API_KEY=your-razorpay-key
 RAZORPAY_API_SECRET=your-razorpay-secret
+GEMINI_API_KEY=
 ```
 
 ## Contributing
@@ -108,4 +121,7 @@ RAZORPAY_API_SECRET=your-razorpay-secret
 
 ## License
 
-This project is licensed under the ISC License.
+This project is licensed under the MIT License.
+
+# Author
+Aditya Srivastav

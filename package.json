@@ -32,7 +32,7 @@
     ]
   },
   "author": "Aditya",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "@babel/preset-env": "^7.23.9",
     "cross-env": "^7.0.3",
