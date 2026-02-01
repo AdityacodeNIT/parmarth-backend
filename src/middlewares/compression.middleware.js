@@ -1,6 +1,6 @@
 import compression from 'compression';
-import zlib from 'zlib'; // ✅ Added to fix constants issue
-import crypto from 'crypto'; // ✅ ES module import for ETag generation
+import zlib from 'zlib'; //  Added to fix constants issue
+import crypto from 'crypto'; //  ES module import for ETag generation
 import logger from '../utils/logger.js';
 
 // Enhanced compression middleware with intelligent compression
@@ -53,7 +53,7 @@ export const intelligentCompression = compression({
     return compressTypes.some(type => contentType.includes(type));
   },
 
-  // ✅ Fixed: Use zlib.constants instead of compression.constants
+  //  Fixed: Use zlib.constants instead of compression.constants
   strategy:
     process.env.NODE_ENV === 'production'
       ? zlib.constants.Z_DEFAULT_STRATEGY
@@ -261,7 +261,7 @@ export const etagMiddleware = (req, res, next) => {
   next();
 };
 
-// ✅ Use ES module import for crypto
+//  Use ES module import for crypto
 const generateETag = (data) => {
   const hash = crypto.createHash('md5');
   hash.update(JSON.stringify(data));

@@ -7,203 +7,270 @@ import { ApiResponse } from "../../utils/ApiResponse.js";
 import { ApiError } from "../../utils/ApiError.js";
 
 
-// ─────────────────────────── Orders List ───────────────────────────
-const orderlist = asyncHandler(async (req, res) => {
-  const orders = await Order.aggregate([
-    { $unwind: "$items" },
-    {
-      $lookup: {
-        from: "products", // Collection name for Product
-        localField: "items.productId", // Field in Order referencing Product
-        foreignField: "_id",
-        as: "productDetails",
-      },
-    },
-    { $unwind: "$productDetails" },
-    {
-      $lookup: {
-        from: "users",
-        localField: "userId", // Field in Order referencing User
-        foreignField: "_id",
-        as: "userDetails",
-      },
-    },
-    { $unwind: "$userDetails" },
-    {
-      $group: {
-        _id: "$status",
-        orders: {
-          $push: {
-            productName: "$productDetails.name",
-            productPrice: "$productDetails.price",
-            productImage: "$productDetails.ProductImage",
-            quantity: "$items.quantity",
-            username: "$userDetails.username",
-            email: "$userDetails.email",
-          },
-        },
-        totalOrders: { $sum: 1 },
-        totalAmount: {
-          $sum: {
-            $multiply: ["$items.quantity", "$productDetails.price"],
-          },
-        },
-      },
-    },
-  ]);
-  res.status(200).json(new ApiResponse(200, orders, "Orders fetched successfully"));
+// ─────────────────────────── DASHBOARD STATS ───────────────────────────
+export const getDashboardStats = asyncHandler(async (req, res) => {
+  // Get counts
+  const totalUsers = await User.countDocuments();
+  const totalProducts = await Product.countDocuments();
+  const totalOrders = await Order.countDocuments();
+  const pendingSellers = await Seller.countDocuments({ approved: false });
+  const approvedSellers = await Seller.countDocuments({ approved: true });
+  const pendingProducts = await Product.countDocuments({ isApproved: false });
+
+  // Calculate total revenue
+  const orders = await Order.find({ status: { $in: ["delivered", "completed"] } });
+  const totalRevenue = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+
+  // Get growth metrics (compare with last month)
+  const lastMonth = new Date();
+  lastMonth.setMonth(lastMonth.getMonth() - 1);
+
+  const usersLastMonth = await User.countDocuments({ createdAt: { $lt: lastMonth } });
+  const userGrowth = usersLastMonth > 0 
+    ? ((totalUsers - usersLastMonth) / usersLastMonth * 100).toFixed(1)
+    : 0;
+
+  const ordersLastMonth = await Order.find({
+    createdAt: { $lt: lastMonth },
+    status: { $in: ["delivered", "completed"] }
+  });
+  const revenueLastMonth = ordersLastMonth.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+  const revenueGrowth = revenueLastMonth > 0
+    ? ((totalRevenue - revenueLastMonth) / revenueLastMonth * 100).toFixed(1)
+    : 0;
+
+  res.status(200).json(
+    new ApiResponse(200, {
+      totalUsers,
+      totalProducts,
+      totalOrders,
+      totalRevenue,
+      pendingSellers,
+      approvedSellers,
+      pendingProducts,
+      userGrowth: parseFloat(userGrowth),
+      revenueGrowth: parseFloat(revenueGrowth),
+    }, "Dashboard stats fetched successfully")
+  );
 });
 
 
-// ─────────────────────────── Users List ───────────────────────────
-const userlist = asyncHandler(async (req, res) => {
+// ─────────────────────────── ORDERS (ADMIN VIEW) ───────────────────────────
+export const orderlist = asyncHandler(async (req, res) => {
+  const orders = await Order.find()
+    .populate("userId", "username email")
+    .populate("items.product", "name price")
+    .populate("items.seller", "businessName");
 
-  const users = await User.aggregate([
-    {
-      $project: {
-        username: 1,
-        fullName: 1,
-        email: 1,
-        role: 1,
-      },
-    },
-  ]);
-  res.status(200).json(new ApiResponse(200, users, "Users fetched successfully"));
+  res.status(200).json(
+    new ApiResponse(200, orders, "Orders fetched successfully")
+  );
 });
 
 
-// ─────────────────────────── Product List ───────────────────────────
-const productList = asyncHandler(async (req, res) => {
-  const products = await Product.aggregate([
-    {
-      $project: {
-        name: 1,
-        price: 1,
-        Category: 1,
-        stocks: 1,
-      },
-    },
-  ]);
-  res.status(200).json(new ApiResponse(200, products, "Products fetched successfully"));
+// ─────────────────────────── USERS LIST ───────────────────────────
+export const userlist = asyncHandler(async (req, res) => {
+  const users = await User.find().select(
+    "username fullName email role createdAt"
+  );
+
+  res.status(200).json(
+    new ApiResponse(200, users, "Users fetched successfully")
+  );
 });
 
 
-// ─────────────────────────── Delete User ───────────────────────────
+// ─────────────────────────── PRODUCTS (ADMIN VIEW) ───────────────────────────
+export const productList = asyncHandler(async (req, res) => {
+  const { status } = req.query;
+
+  let filter = {};
+  if (status === "approved") filter.isApproved = true;
+  if (status === "pending") filter.isApproved = false;
+
+  const products = await Product.find(filter)
+    .populate("seller", "businessName email")
+    .select("name price category stock isApproved createdAt");
+
+  res.status(200).json(
+    new ApiResponse(200, products, "Products fetched successfully")
+  );
+});
+
+
+// ─────────────────────────── PRODUCT APPROVAL ───────────────────────────
+export const updateProductApproval = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { isApproved } = req.body;
+
+  const product = await Product.findById(id);
+  if (!product) throw new ApiError(404, "Product not found");
+
+  product.isApproved = isApproved;
+  await product.save();
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      product,
+      isApproved ? "Product approved" : "Product approval revoked"
+    )
+  );
+});
+
+
+// ─────────────────────────── DELETE USER ───────────────────────────
 export const deleteUser = asyncHandler(async (req, res) => {
-  const userId = req.params.id;
-
-  const user = await User.findById(userId);
-
+  const user = await User.findById(req.params.id);
   if (!user) throw new ApiError(404, "User not found");
   if (user.role === "superadmin")
-    throw new ApiError(403, "Cannot delete a superadmin");
+    throw new ApiError(403, "Cannot delete superadmin");
 
-  const deletedUser = await User.findByIdAndDelete(userId);
-  res.status(200).json(new ApiResponse(200, deletedUser, "User deleted successfully"));
+  await User.findByIdAndDelete(req.params.id);
+
+  res.status(200).json(
+    new ApiResponse(200, {}, "User deleted successfully")
+  );
 });
 
 
-// ─────────────────────────── Update User Role ───────────────────────────
+// ─────────────────────────── UPDATE USER ROLE ───────────────────────────
 export const updateUserRole = asyncHandler(async (req, res) => {
-  const userId = req.params.id;
-  const newRole = req.body.role;
+  const { role } = req.body;
 
-  if (!["customer", "seller", "admin", "superadmin"].includes(newRole)) {
+  if (!["customer", "seller", "admin", "superadmin"].includes(role)) {
     throw new ApiError(400, "Invalid role");
   }
 
-  const user = await User.findByIdAndUpdate(userId, { role: newRole }, { new: true });
+  const user = await User.findByIdAndUpdate(
+    req.params.id,
+    { role },
+    { new: true }
+  );
+
   if (!user) throw new ApiError(404, "User not found");
 
-  res.status(200).json(new ApiResponse(200, user, `User promoted to ${newRole}`));
-});
-
-
-// ─────────────────────────── Manage Orders ───────────────────────────
-export const manageOrders = asyncHandler(async (req, res) => {
-  const orders = await Order.find();
-  res.status(200).json(new ApiResponse(200, orders, "Orders fetched successfully"));
-});
-
-
-// ─────────────────────────── Get Products by Role ───────────────────────────
-export const getProducts = asyncHandler(async (req, res) => {
-  let filter = req.user.role === "seller" ? { seller: req.user._id } : {};
-  const products = await Product.find(filter);
-  res.status(200).json(new ApiResponse(200, products, "Products fetched successfully"));
+  res.status(200).json(
+    new ApiResponse(200, user, `Role updated to ${role}`)
+  );
 });
 
 
 // ─────────────────────────── SELLER MANAGEMENT ───────────────────────────
 
-// ✅ Get all sellers (optionally filter by approval status)
 export const getAllSellers = asyncHandler(async (req, res) => {
-  const { status } = req.query;
+  console.log("Fetching all sellers with filters");
+  console.log("Query Params:", req.query);
+  const { status, search } = req.query;
 
+  console.log("Status:", status);
+
+
+  //  Pagination
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  //  Status validation
+  const validStatuses = ["approved", "pending"];
   let filter = {};
-  if (status === "approved") filter.approved = true;
-  if (status === "pending") filter.approved = false;
 
-  const sellers = await Seller.find(filter).select(
-    "fullName email username gstNumber businessName approved"
+  if (status) {
+    if (!validStatuses.includes(status)) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, null, "Invalid status value"));
+    }
+
+    filter.approved = status === "approved";
+  }
+
+  //  Search filter
+  if (search) {
+    filter.$or = [
+      { fullName: { $regex: search, $options: "i" } },
+      { email: { $regex: search, $options: "i" } },
+      { businessName: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  //  DB Query
+
+  console.log("Filter applied:", filter);
+  const sellers = await Seller.find(filter)
+    .select(
+      "fullName email businessName gstNumber approved storeStatus createdAt"
+    )
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  const total = await Seller.countDocuments(filter);
+
+  //  Response
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        sellers,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+      "Sellers fetched successfully"
+    )
   );
-
-  res
-    .status(200)
-    .json(new ApiResponse(200, sellers, "Sellers fetched successfully"));
 });
 
 
-// ✅ Get a single seller by ID (for detail view)
-export const getSellerById = asyncHandler(async (req, res) => {
-  const { id } = req.params;
 
-  const seller = await Seller.findById(id).select("-password -refreshSessionToken");
+// Get single seller
+export const getSellerById = asyncHandler(async (req, res) => {
+  const seller = await Seller.findById(req.params.id)
+    .select("-password -refreshToken");
 
   if (!seller) throw new ApiError(404, "Seller not found");
 
-  res
-    .status(200)
-    .json(new ApiResponse(200, seller, "Seller details fetched successfully"));
+  res.status(200).json(
+    new ApiResponse(200, seller, "Seller details fetched successfully")
+  );
 });
 
 
-// ✅ Approve or revoke seller approval
 export const updateSellerApproval = asyncHandler(async (req, res) => {
-  const { id } = req.params;
   const { approved } = req.body;
 
-  const seller = await Seller.findById(id);
+  const seller = await Seller.findById(req.params.id);
   if (!seller) throw new ApiError(404, "Seller not found");
 
   seller.approved = approved;
+  seller.storeStatus = approved ? "active" : "suspended";
   await seller.save();
 
   res.status(200).json(
     new ApiResponse(
       200,
       seller,
-      approved ? "Seller approved successfully" : "Seller approval revoked"
+      approved ? "Seller approved" : "Seller suspended"
     )
   );
 });
 
 
-// ✅ Delete a seller
+// Delete seller
 export const deleteSeller = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+  console.log(req.params.id);
 
-  const seller = await Seller.findById(id);
+  const seller = await Seller.findById(req.params.id);
+  console.log(seller);
   if (!seller) throw new ApiError(404, "Seller not found");
 
-  await Seller.findByIdAndDelete(id);
-  res.status(200).json(new ApiResponse(200, {}, "Seller deleted successfully"));
+  await Seller.findByIdAndDelete(req.params.id);
+
+  res.status(200).json(
+    new ApiResponse(200, {}, "Seller deleted successfully")
+  );
 });
-
-
-// ─────────────────────────── EXPORTS ───────────────────────────
-export {
-  orderlist,
-  userlist,
-  productList
-};

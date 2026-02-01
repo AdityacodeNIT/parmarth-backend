@@ -73,7 +73,7 @@ Produce a short paragraph of three to four sentences explaining how this nutriti
   },
 });
 
-const text = result.response.text(); // ✅ CORRECT
+const text = result.response.text(); //  CORRECT
 
 if (!text) {
   return res.status(500).json({ error: "AI response empty" });

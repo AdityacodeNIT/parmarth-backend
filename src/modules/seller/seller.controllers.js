@@ -42,7 +42,7 @@ import Jwt from "jsonwebtoken";
     bankName,
   } = req.body;
 
-  // 🔹 1. Validate all required fields
+  //  1. Validate all required fields
   if (
     [
       fullName,
@@ -65,7 +65,7 @@ import Jwt from "jsonwebtoken";
     throw new ApiError(400, "All fields are required");
   }
 
-  // 🔹 2. Check for existing seller by username or email
+  //  2. Check for existing seller by username or email
   const existedUser = await Seller.findOne({
     $or: [{ username }, { email }],
   });
@@ -74,7 +74,7 @@ import Jwt from "jsonwebtoken";
     throw new ApiError(409, "User with email or username already exists");
   }
 
-  // 🔹 3. Handle image uploads
+  //  3. Handle image uploads
   const avatarlocalPath = req.files?.avatar?.[0]?.path;
   let coverImageLocalPath;
 
@@ -90,7 +90,7 @@ import Jwt from "jsonwebtoken";
     throw new ApiError(400, "Avatar file is required");
   }
 
-  // 🔹 4. Upload to Cloudinary
+  //  4. Upload to Cloudinary
   let avatar;
   try {
     avatar = await uploadOnCloudinary(avatarlocalPath);
@@ -109,7 +109,7 @@ import Jwt from "jsonwebtoken";
     }
   }
 
-  // 🔹 5. Create seller in DB
+  //  5. Create seller in DB
   let seller;
   try {
     seller = await Seller.create({
@@ -137,7 +137,7 @@ import Jwt from "jsonwebtoken";
     throw new ApiError(500, "Error creating user in database");
   }
 
-  // 🔹 6. Remove sensitive fields before sending response
+  //  6. Remove sensitive fields before sending response
   const createdSeller = await Seller.findById(seller._id).select(
     "-password -refreshSessionToken"
   );
@@ -146,7 +146,7 @@ import Jwt from "jsonwebtoken";
     throw new ApiError(500, "User created but could not be retrieved");
   }
 
-  // 🔹 7. Send final response
+  //  7. Send final response
   return res.status(201).json(
     new ApiResponse(
       200,
@@ -401,7 +401,7 @@ const getSellerDashboard = asyncHandler(async (req, res) => {
     throw new ApiError(401, "Unauthorized — seller not logged in");
   }
 
-  // ✅ Fetch data in parallel
+  //  Fetch data in parallel
   const [productCount, orderStats] = await Promise.all([
     Product.countDocuments({ seller: sellerId }),
     Order.aggregate([

@@ -45,5 +45,7 @@ sellerRouter.route("/changePassword").post(verifySeller, changePassword);
 sellerRouter.route("/sellerRefresh-token").post(verifySeller, refreshAccessSessionToken);
 
 sellerRouter.route("/dashboard").get(verifySeller,getSellerDashboard);
+
+
 export default sellerRouter;
 

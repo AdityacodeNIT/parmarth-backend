@@ -4,8 +4,6 @@ import { User } from "./user.model.js";
 import { deleteFromCloudinary, uploadOnCloudinary } from "../../utils/cloudinary.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 import Jwt from "jsonwebtoken";
-// import { generateOTP } from "../utils/otpGenerator.js";
-// import { sendOTP } from "../utils/Nodemailer.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
     try {
@@ -100,20 +98,31 @@ const loginUser = asyncHandler(async (req, res) => {
         throw new ApiError(404, "User does not exist");
     }
 
+    // Check if account is locked
+    if (user.isLocked) {
+        const lockTimeRemaining = Math.ceil((user.lockUntil - Date.now()) / 60000);
+        throw new ApiError(423, `Account is locked. Try again in ${lockTimeRemaining} minutes`);
+    }
+
     const isPasswordValid = await user.isPasswordCorrect(password);
 
     if (!isPasswordValid) {
+        await user.incLoginAttempts();
         throw new ApiError(401, "Invalid user credentials");
     }
 
-    // OTP verification removed
-    // if (!user.isVerified) {
-    //     throw new ApiError(403, "Please verify your email with the OTP first");
-    // }
+    // Reset login attempts on successful password verification
+    await user.resetLoginAttempts();
 
+    // Generate tokens directly - NO OTP
     const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
 
-    const loggedInUser = await User.findById(user._id).select("-password");
+    // Record successful login
+    const ip = req.ip || req.connection.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    await user.recordLogin(ip, userAgent, 'Unknown');
+
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
 
     const options = {
         httpOnly: true,
@@ -129,8 +138,8 @@ const loginUser = asyncHandler(async (req, res) => {
             new ApiResponse(
                 200,
                 loggedInUser,
-                "User logged In Successfully"
-            ),
+                "Login successful"
+            )
         );
 });
 
@@ -158,8 +167,6 @@ const logOutUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "User Logged Out"));
 });
 
-
-// 🔴 Removed verifyOtp and resendOTP completely
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
   const incomingRefreshToken = req.cookies.refreshToken;

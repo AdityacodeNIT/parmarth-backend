@@ -133,6 +133,38 @@ const sellerSchema = new Schema(
       type: Boolean,
       default: false, // Admin must approve before login
     },
+
+    /* ───────────────────────────────
+   Seller Store Meta
+────────────────────────────── */
+storeStatus: {
+  type: String,
+  enum: ["active", "suspended", "closed"],
+  default: "active",
+},
+totalProducts: {
+  type: Number,
+  default: 0,
+},
+totalOrders: {
+  type: Number,
+  default: 0,
+},
+
+/* ───────────────────────────────
+   Notification Settings
+────────────────────────────── */
+notifications: {
+  lowStock: { type: Boolean, default: true },
+  email: { type: Boolean, default: true },
+},
+
+lastLoginAt: {
+  type: Date,
+},
+
+
+
   },
   { timestamps: true }
 );

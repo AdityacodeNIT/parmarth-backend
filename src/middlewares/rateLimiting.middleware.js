@@ -3,7 +3,7 @@ import { ApiError } from '../utils/ApiError.js';
 import logger from '../utils/logger.js';
 
 /* -------------------------------------------------------------------------- */
-/* ✅ RATE LIMIT HANDLER                                                      */
+/*  RATE LIMIT HANDLER                                                      */
 /* -------------------------------------------------------------------------- */
 
 const rateLimitHandler = (req, res) => {
@@ -31,7 +31,7 @@ const rateLimitHandler = (req, res) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/* ✅ SKIP FUNCTION (For Whitelisted or Health Routes)                        */
+/*  SKIP FUNCTION (For Whitelisted or Health Routes)                        */
 /* -------------------------------------------------------------------------- */
 
 const skipRateLimit = (req) => {
@@ -44,7 +44,7 @@ const skipRateLimit = (req) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/* ✅ PREDEFINED LIMITERS                                                     */
+/*  PREDEFINED LIMITERS                                                     */
 /* -------------------------------------------------------------------------- */
 
 // General limiter (for most endpoints)
@@ -130,7 +130,7 @@ export const burstProtection = rateLimit({
 });
 
 /* -------------------------------------------------------------------------- */
-/* ✅ ROLE-BASED DYNAMIC LIMITER                                             */
+/*  ROLE-BASED DYNAMIC LIMITER                                             */
 /* -------------------------------------------------------------------------- */
 
 export const dynamicRateLimit = (options = {}) => {
@@ -158,7 +158,7 @@ export const dynamicRateLimit = (options = {}) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/* ✅ UNIVERSAL DYNAMIC MIDDLEWARE EXPORT (MAIN FIX)                          */
+/*  UNIVERSAL DYNAMIC MIDDLEWARE EXPORT (MAIN FIX)                          */
 /* -------------------------------------------------------------------------- */
 
 export const rateLimitMiddleware = (type, options = {}) => {

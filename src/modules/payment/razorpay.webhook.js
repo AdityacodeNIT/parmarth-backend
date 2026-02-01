@@ -18,7 +18,7 @@ export const razorpayWebhook = async (req, res) => {
 
     const event = JSON.parse(req.body.toString());
 
-    // ✅ Handle payment success
+    //  Handle payment success
     if (event.event === "payment.captured") {
       const payment = event.payload.payment.entity;
 
@@ -31,7 +31,7 @@ export const razorpayWebhook = async (req, res) => {
       );
     }
 
-    // ✅ Handle payment failure
+    //  Handle payment failure
     if (event.event === "payment.failed") {
       const payment = event.payload.payment.entity;
 

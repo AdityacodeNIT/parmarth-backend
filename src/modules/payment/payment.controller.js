@@ -16,7 +16,7 @@ const checkout = asyncHandler(async (req, res) => {
     const order = await razorpay.orders.create(options)
     ;
 
-    // ✅ Save new payment entry
+    //  Save new payment entry
     await Payment.create({
       razorpayOrderId: order.id,
       amount,
@@ -52,7 +52,7 @@ const paymentVerification = asyncHandler(async (req, res) => {
       return res.status(400).send("Invalid payment signature");
     }
 
-    // ✅ Update payment status and save payment ID + signature
+    //  Update payment status and save payment ID + signature
     await Payment.findOneAndUpdate(
       { razorpayOrderId: razorpay_order_id },
       {
@@ -78,7 +78,7 @@ const transactionVerification = asyncHandler(async (req, res) => {
       throw new ApiError(500, "Incomplete webhook data");
     }
 
-    // ✅ Optionally update status here (for extra safety via webhook)
+    //  Optionally update status here (for extra safety via webhook)
     await Payment.findOneAndUpdate(
       { razorpayOrderId: orderId },
       {

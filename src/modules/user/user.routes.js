@@ -18,6 +18,7 @@ import {
   getSellerById,
   updateSellerApproval,
   deleteSeller,
+  getDashboardStats,
 } from "../admin/admin.controller.js";
 
 import { verifyRole } from "../../middlewares/role.middleware.js";
@@ -29,7 +30,7 @@ const router = Router();
 
 // ─────────────────────────────── USER ROUTES ───────────────────────────────
 
-// ✅ Register user
+//  Register user
 router.route("/register").post(
   upload.fields([
     { name: "avatar", maxCount: 1 },
@@ -40,60 +41,64 @@ router.route("/register").post(
   registerUser
 );
 
-// ✅ Login user
+//  Login user
 router.route("/login").post(isAuthenticated, loginUser);
 
-// ✅ Logout
+//  Logout
 router.route("/logout").post(logOutUser);
 
 router.route("/me").get(verifyJWT,getCurrentUser);
 
-// ✅ Refresh token
+//  Refresh token
 router.route("/refresh-token").post(refreshAccessToken);
 
-// ✅ Update avatar
+//  Update avatar
 router.route("/updateAvatar").post(upload.single("avatar"), verifyJWT, updateUserAvatar);
 
-// ✅ Update user details
+//  Update user details
 router.route("/updateUserdetail").post(verifyJWT, updateAccountdetail);
 
-// ✅ Change password
+//  Change password
 router.route("/changePassword").post(verifyJWT, changePassword);
 
 
 // ─────────────────────────────── ADMIN ROUTES ───────────────────────────────
 
-// ✅ Get all users
+//  Dashboard stats
+router.route("/dashboard-stats").get(verifyJWT, verifyRole("superadmin"), getDashboardStats);
+
+//  Get all users
 router.route("/userList").get(verifyJWT, verifyRole("superadmin"), userlist);
 
-// ✅ Delete a user
+//  Delete a user
 router
   .route("/deleteUser/:id")
   .delete(verifyJWT, verifyRole("superadmin"), deleteUser);
 
-// ✅ Update a user’s role
+//  Update a user’s role
 router
   .route("/updateUserPost/:id")
   .post(verifyJWT, verifyRole("superadmin"), updateUserRole);
 
 
 // ─────────────────────────────── SELLER MANAGEMENT ───────────────────────────────
-// ✅ Get all sellers (optional query: ?status=pending or ?status=approved)
+//  Get all sellers (optional query: ?status=pending or ?status=approved)
 router
   .route("/sellers")
   .get(verifyJWT, verifyRole("superadmin"), getAllSellers);
 
-// ✅ Get single seller details by ID
+//  Get single seller details by ID
 router
   .route("/sellers/:id")
   .get(verifyJWT, verifyRole("superadmin"), getSellerById);
 
-// ✅ Approve / revoke seller
+//  Approve / revoke seller
+
 router
   .route("/sellers/:id")
   .patch(verifyJWT, verifyRole("superadmin"), updateSellerApproval);
 
-// ✅ Delete seller
+//  Delete seller
 router
   .route("/sellers/:id")
   .delete(verifyJWT, verifyRole("superadmin"), deleteSeller);

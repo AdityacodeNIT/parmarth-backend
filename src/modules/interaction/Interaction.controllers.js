@@ -15,7 +15,7 @@ export const saveUserInteraction = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
-  // 🔹 Save Interaction in MongoDB
+  //  Save Interaction in MongoDB
   const interaction = new UserInteraction({
     userId: req.user._id,
     productId,
@@ -24,7 +24,7 @@ export const saveUserInteraction = asyncHandler(async (req, res) => {
 
   await interaction.save();
 
-  // 🔹 Send Data to Python Model for Training
+  //  Send Data to Python Model for Training
   try {
     const response=await axios.post(`${process.env.PYTHON_API_KEY}/train`, {
       userId: req.user._id,
@@ -43,13 +43,13 @@ export const saveUserInteraction = asyncHandler(async (req, res) => {
 export const getUserRecommendations = asyncHandler(async (req, res) => {
   const userId = req.user._id; 
 
-  // 🔹 Fetch recommendations from Python API
+  //  Fetch recommendations from Python API
   try {
     
     const response = await axios.get(`${process.env.PYTHON_API_KEY}/recommend/${userId}`);
     const recommendedProductIds = response.data.recommended_products;
 
-    // 🔹 Fetch product details from MongoDB
+    //  Fetch product details from MongoDB
     const recommendedProducts = await Product.find({ _id: { $in: recommendedProductIds } }).limit(5);
 
 

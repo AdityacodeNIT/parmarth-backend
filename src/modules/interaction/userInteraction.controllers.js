@@ -19,7 +19,7 @@ export const getRecommendations = asyncHandler(async (req, res) => {
     const response = await axios.get(`http://127.0.0.1:5001/recommend/${userId}`);
     const recommendedProductIds = response.data.recommended_products;
 
-    // 🔹 Fetch product details from MongoDB
+    //  Fetch product details from MongoDB
     const recommendedProducts = await Product.find({ _id: { $in: recommendedProductIds } });
 
     res.json({ userId, recommendedProducts });
