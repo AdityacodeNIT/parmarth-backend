@@ -25,6 +25,11 @@ export const createOrderController = asyncHandler(async (req, res) => {
 
   const { items, paymentMethod } = req.body;
 
+  console.log('=== CREATE ORDER REQUEST ===');
+  console.log('Payment Method:', paymentMethod);
+  console.log('Items:', items);
+  console.log('User:', req.user?.username, req.user?.email);
+
   if (!items || items.length === 0) {
     return res.status(400).json({ error: 'No items provided' });
   }
@@ -106,7 +111,13 @@ for (const item of items) {
   groupedOrders[Address_id].sub_total += product.price * quantity;
 }
 
+  console.log('=== GROUPED ORDERS TO SEND TO SHIPROCKET ===');
+  console.log(JSON.stringify(groupedOrders, null, 2));
+
   const result = await createOrder(groupedOrders);
+
+  console.log('=== SHIPROCKET RESPONSE ===');
+  console.log(JSON.stringify(result, null, 2));
 
   res.status(201).json({
     data: result,
@@ -121,6 +132,10 @@ export const getAllOrdersController = asyncHandler(async (req, res) => {
     throw new ApiError(401, 'User not authenticated');
   }
 
+  console.log('=== GET ALL ORDERS REQUEST ===');
+  console.log('User:', req.user.username, req.user.email);
+  console.log('Role:', req.user.role);
+
   const headers = await getHeaders();
   let orders;
 
@@ -130,10 +145,15 @@ export const getAllOrdersController = asyncHandler(async (req, res) => {
     if (req.user.role === 'customer') {
       // Add email as filter for customer role
       url += `?email=${encodeURIComponent(req.user.email)}`;
+      console.log('Customer role - filtering by email:', req.user.email);
+    } else {
+      console.log('Admin role - fetching all orders');
     }
 
+    console.log('Fetching from URL:', url);
     const response = await axios.get(url, headers);
-   
+    console.log('Shiprocket response status:', response.status);
+    console.log('Number of orders received:', response.data?.data?.length || 0);
 
     orders = response.data;
   } catch (shiprocketError) {
@@ -170,12 +190,29 @@ export const getAllOrdersController = asyncHandler(async (req, res) => {
 
   // --- Keep role-based filtering as a safety net ---
   if (req.user.role === 'customer') {
+    const beforeFilter = orders.data.length;
     const filteredOrders = orders.data.filter(order => {
-      return order.customer_email === req.user?.email;
+      const matches = order.customer_email === req.user?.email;
+      if (!matches) {
+        console.log('Filtering out order:', order.id, 'email:', order.customer_email);
+      }
+      return matches;
     });
     orders.data = filteredOrders;
+    console.log(`Filtered orders: ${beforeFilter} -> ${filteredOrders.length}`);
   } else {
     console.log('Admin user detected. Returning all orders...');
+  }
+
+  console.log('=== FINAL ORDERS TO RETURN ===');
+  console.log('Total orders:', orders.data.length);
+  if (orders.data.length > 0) {
+    console.log('Sample order:', {
+      id: orders.data[0].id,
+      status: orders.data[0].status,
+      payment_method: orders.data[0].payment_method,
+      customer_email: orders.data[0].customer_email,
+    });
   }
 
   return res.status(200).json({
@@ -220,6 +257,10 @@ export const cancelOrder = asyncHandler(async (req, res) => {
   const headers = await getHeaders(); // Must return valid Authorization headers
   const orderId = req.params.id;
 
+  console.log('=== CANCEL ORDER REQUEST ===');
+  console.log('Order ID:', orderId);
+  console.log('User:', req.user?.username, req.user?.email);
+
   if (!orderId) {
     throw new ApiError(400, 'Order ID is required for cancellation');
   }
@@ -228,6 +269,8 @@ export const cancelOrder = asyncHandler(async (req, res) => {
     ids: [orderId] // Shiprocket expects an array of IDs
   };
 
+  console.log('Sending cancel request to Shiprocket:', payload);
+
   try {
     const response = await axios.post(
       'https://apiv2.shiprocket.in/v1/external/orders/cancel',
@@ -235,13 +278,20 @@ export const cancelOrder = asyncHandler(async (req, res) => {
       headers
     );
 
+    console.log('=== SHIPROCKET CANCEL RESPONSE ===');
+    console.log('Status:', response.status);
+    console.log('Data:', JSON.stringify(response.data, null, 2));
+
     res.status(200).json({
       success: true,
       data: response.data,
       message: `Order ${orderId} cancelled successfully`
     });
   } catch (err) {
-    console.error('Error cancelling order:', err.message || err);
+    console.error('=== CANCEL ORDER ERROR ===');
+    console.error('Error message:', err.message);
+    console.error('Response status:', err.response?.status);
+    console.error('Response data:', err.response?.data);
 
     if (err.response) {
       const statusCode = err.response.status || 502;

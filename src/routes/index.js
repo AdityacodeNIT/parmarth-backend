@@ -10,8 +10,8 @@ import healthRoutes from "./infra/health.routes.js";
 import addressRoutes from "../modules/address/address.routes.js";
 import paymentRoutes from "../modules/payment/payment.routes.js";
 import Reviewrouter from "../modules/review/review.routes.js";
-
 import Subscriberouter from "../modules/Subscriber/subscriber.routes.js";
+import returnRoutes from "../modules/return/return.routes.js";
 
 
 const router = express.Router();
@@ -24,6 +24,7 @@ router.use("/cart", cartRoutes);
 router.use("/wishlist", wishlistRoutes);
 router.use("/address", addressRoutes);
 router.use("/shiprocket", shiprouter);
+router.use("/returns", returnRoutes);
 
 /* API v2 */
 router.use("/payment", paymentRoutes);
